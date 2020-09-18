@@ -2,7 +2,8 @@ Gatt Client Multi Connection
 ========================
 
 ## 寫死版本 
-* file : ```../files/gattc_multi_connect1```
+* commit: ver.01
+* changed file : ```../files/gattc_multi_connect```
 * config要改：
     * Include GATT server module(GATTS) = cancel
     * BT/BLE MAX ACL CONNECTIONS(1~7) = 7
@@ -17,7 +18,8 @@ Gatt Client Multi Connection
 
 
 ## handler合併 
-* file : ```../files/gattc_multi_connect2```
+* commit: ver.02
+* changed file : ```../files/gattc_multi_connect```
 * config要改：
     * Include GATT server module(GATTS) = cancel
     * BT/BLE MAX ACL CONNECTIONS(1~7) = 7
@@ -26,7 +28,8 @@ Gatt Client Multi Connection
     * #define PROFILE_NUM 7
 
 ## 可以看到notify訊息版＆加入不同service 
-* file : ```../files/gattc_multi_connect3```
+* commit: ver.03
+* changed file : ```../files/gattc_multi_connect```
 * config要改：
     * Include GATT server module(GATTS) = cancel
     * BT/BLE MAX ACL CONNECTIONS(1~7) = 7
@@ -37,7 +40,8 @@ Gatt Client Multi Connection
     * ```app_main```開頭做初始化
 
 ## handler合併 （不同service）
-* file : ```../files/gattc_multi_connect4```
+* commit: ver.04
+* changed file : ```../files/gattc_multi_connect```
 * config要改：
     * Include GATT server module(GATTS) = cancel
     * BT/BLE MAX ACL CONNECTIONS(1~7) = 7
@@ -48,7 +52,8 @@ Gatt Client Multi Connection
     * 在scan時```esp_ble_gattc_open```前要做uuid設定 
 
 ## 用bda(mac+2)來找裝置 ： 避免遇到名字相同的情況
-* file : ```../files/gattc_multi_connect5```
+* commit: ver.05
+* changed file : ```../files/gattc_multi_connect```
 * config要改：
     * Include GATT server module(GATTS) = cancel
     * BT/BLE MAX ACL CONNECTIONS(1~7) = 7
@@ -68,8 +73,26 @@ struct remote_device {
     * ```app_main```開頭做初始化
     * 在scan時```esp_ble_gattc_open```前要做uuid設定 
 
+
+
+## 精簡一點
+* commit: ver.06
+* changed file : ```../files/gattc_multi_connect```
+* config要改：
+    * Include GATT server module(GATTS) = cancel
+    * BT/BLE MAX ACL CONNECTIONS(1~7) = 7
+* 要改的全域
+    * #define CONN_DEVICE_NUM  7
+    * #define PROFILE_NUM 7
+* 刪除
+    scan裡面的`if (adv_name != NULL)`，因為已經用bda來找了所以不需要管裝置名稱是否有被設置
+* 修改
+    把`allConnected`改名為`connectedNum`，比較貼合功能
+
+
 -----
 * [Reference : ESP-IDF Gatt Client Multi Connection Demo](https://github.com/espressif/esp-idf/tree/master/examples/bluetooth/bluedroid/ble/gattc_multi_connect)
+
 
 
 
