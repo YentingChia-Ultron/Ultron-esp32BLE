@@ -20,7 +20,7 @@
 *
 ****************************************************************************/
 
-//ver.05
+//ver.06
 
 #include <stdint.h>
 #include <string.h>
@@ -48,8 +48,8 @@
 
 /* register three profiles, each profile corresponds to one connection,
    which makes it easy to handle each connection event */
-#define CONN_DEVICE_NUM  3
-#define PROFILE_NUM 3
+#define CONN_DEVICE_NUM  2
+#define PROFILE_NUM 2
 #define INVALID_HANDLE   0
 
 #define BUTTON0   2
@@ -74,7 +74,7 @@ static esp_bt_uuid_t notify_descr_uuid = {
     .uuid = {.uuid16 = ESP_GATT_UUID_CHAR_CLIENT_CONFIG,},
 };
 
-static int allConnected = 0;
+static int connectedNum = 0;
 static bool get_service[CONN_DEVICE_NUM] = {0};
 static bool Isconnecting    = false;
 static bool stop_scan_done  = false;
@@ -86,9 +86,9 @@ static esp_gattc_descr_elem_t *descr_elem_result_b  = NULL;
 static esp_gattc_char_elem_t  *char_elem_result_c   = NULL;
 static esp_gattc_descr_elem_t *descr_elem_result_c  = NULL;
 
-static const char remote_device_name[3][50] = {"ESP_GATTS_DEMO_a", "ESP_GATTS_DEMO_a", "iWEECARE Temp Pal"};
+static const char remote_device_name[3][50] = {"Ai-Thinker", "ESP_GATTS_DEMO_a", "iWEECARE Temp Pal"};
 static const uint8_t remote_device_bda[3][6] = {
-    {0xB4, 0xE6, 0x2D, 0xE9, 0x3A, 0xCF},
+    {0xA4, 0xC1, 0x38, 0x76, 0x9F, 0x7D},
     {0x98, 0xF4, 0xAB, 0x09, 0x22, 0x42},
     {0x64, 0x69, 0x4E, 0x43, 0x54, 0x19}
 };
@@ -152,7 +152,7 @@ static void gattc_profile_0_event_handler(esp_gattc_cb_event_t event, esp_gatt_i
         if (p_data->open.status != ESP_GATT_OK){
             //open failed, ignore the first device, connect the second device
             ESP_LOGE(GATTC_TAG, "connect device failed, status %d", p_data->open.status);
-            allConnected--;
+            connectedNum--;
             start_scan();
             break;
         }
@@ -377,7 +377,7 @@ static void gattc_profile_0_event_handler(esp_gattc_cb_event_t event, esp_gatt_i
             if (memcmp(p_data->disconnect.remote_bda, gl_profile_tab[i].remote_bda, 6) == 0){
             start_scan();
             ESP_LOGI(GATTC_TAG, "device a disconnect");
-            allConnected--;
+            connectedNum--;
             gl_profile_tab[i].isConnected = false;
             get_service[(int)gl_profile_tab[i].conn_id] = false;
             }
@@ -429,15 +429,13 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
             if (Isconnecting){
                 break;
             }
-            if (allConnected == CONN_DEVICE_NUM && !stop_scan_done){
+            if (connectedNum == CONN_DEVICE_NUM && !stop_scan_done){
                 stop_scan_done = true;
                 esp_ble_gap_stop_scanning();
                 ESP_LOGI(GATTC_TAG, "all devices are connected");
                 break;
             }
-            if (adv_name != NULL) {
-
-                for(int i = 0 ; i < CONN_DEVICE_NUM; i++)
+            for(int i = 0 ; i < CONN_DEVICE_NUM; i++)
                 {
                     if (memcmp(scan_result->scan_rst.bda, my_remote_device[i].bda, 6) == 0)
                     {
@@ -445,19 +443,18 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
                         for(int i = 0; i < 6; i++){
                             printf("%2X ", scan_result->scan_rst.bda[i]);}
                         printf("\n");
-                        allConnected++;
-                        printf("allConnected : %d \n",allConnected);
+                        connectedNum++;
+                        printf("connectedNum : %d \n",connectedNum);
                         ESP_LOGI(GATTC_TAG, "Searched device %s", my_remote_device[i].name);
                         esp_ble_gap_stop_scanning();
-                        gl_profile_tab[allConnected - 1].serviceUUID = my_remote_device[i].serviceUUID;
-                        gl_profile_tab[allConnected - 1].filter_charUUID.len = ESP_UUID_LEN_16;
-                        gl_profile_tab[allConnected - 1].filter_charUUID.uuid.uuid16 = my_remote_device[i].charUUID;
+                        gl_profile_tab[connectedNum - 1].serviceUUID = my_remote_device[i].serviceUUID;
+                        gl_profile_tab[connectedNum - 1].filter_charUUID.len = ESP_UUID_LEN_16;
+                        gl_profile_tab[connectedNum - 1].filter_charUUID.uuid.uuid16 = my_remote_device[i].charUUID;
                         esp_ble_gattc_open(gl_profile_tab[i].gattc_if, scan_result->scan_rst.bda, scan_result->scan_rst.ble_addr_type, true);
                         Isconnecting = true;
                         break;
                     }
                 }
-            }
             break;
         case ESP_GAP_SEARCH_INQ_CMPL_EVT:
             break;
@@ -524,6 +521,7 @@ static void sendButtCmd(void *pvParameters)
     while(1)
     {
         printf("into sendButtCmd!!   \n");
+        //send_command("12345", 6, 0);
         const char cmd[2][4] = {"GOUP", "GODN"};
         bool buttState[2] = {gpio_get_level(BUTTON0), gpio_get_level(BUTTON1)};
         printf("\nbuttState : %d   %d\n", buttState[0], buttState[1]);
@@ -546,7 +544,15 @@ static void sendButtCmd(void *pvParameters)
         vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
 }
-
+static void sendTB03Cmd(void *pvParameters)
+{
+    while(1)
+    {
+        printf("sendTB03Cmd\n");
+        send_command("123", 3, 0);
+        vTaskDelay(2000 / portTICK_PERIOD_MS);
+    }
+}
 static void esp_gattc_cb(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if, esp_ble_gattc_cb_param_t *param)
 {
     //ESP_LOGI(GATTC_TAG, "EVT %d, gattc if %d, app_id %d", event, gattc_if, param->reg.app_id);
@@ -598,7 +604,8 @@ void app_main(void)
     gpio_set_pull_mode(BUTTON1, GPIO_PULLUP_ONLY);
     gpio_set_direction(BUTTON0, GPIO_MODE_INPUT);
     gpio_set_direction(BUTTON1, GPIO_MODE_INPUT);
-    xTaskCreate(&sendButtCmd, "sendButtCmd", 4096, NULL, 15, NULL);
+    //xTaskCreate(&sendButtCmd, "sendButtCmd", 4096, NULL, 15, NULL);
+    xTaskCreate(&sendTB03Cmd, "sendTB03Cmd", 4096, NULL, 15, NULL);
     xTaskCreate(&getConnState, "getConnState", 4096, NULL, 15, NULL);
 
     esp_err_t ret = nvs_flash_init();
