@@ -1,0 +1,30 @@
+nghttp2/lib/nghttp2_helper.o: \
+ /Users/yenchia/esp/esp-idf/components/nghttp/nghttp2/lib/nghttp2_helper.c \
+ /Users/yenchia/esp/esp-idf/components/nghttp/nghttp2/lib/nghttp2_helper.h \
+ /Users/yenchia/esp/esp-idf/components/nghttp/private_include/config.h \
+ /Users/yenchia/esp/esp-idf/components/nghttp/nghttp2/lib/includes/nghttp2/nghttp2.h \
+ /Users/yenchia/esp/esp-idf/components/nghttp/port/include/nghttp2/nghttp2ver.h \
+ /Users/yenchia/esp/esp-idf/components/nghttp/nghttp2/lib/nghttp2_mem.h \
+ /Users/yenchia/esp/esp-idf/components/newlib/platform_include/assert.h \
+ /Users/yenchia/esp/esp-idf/examples/bluetooth/bluedroid/ble/gatt_client/build/include/sdkconfig.h \
+ /Users/yenchia/esp/esp-idf/components/esp_common/include/esp_compiler.h \
+ /Users/yenchia/esp/esp-idf/components/nghttp/nghttp2/lib/nghttp2_net.h
+
+/Users/yenchia/esp/esp-idf/components/nghttp/nghttp2/lib/nghttp2_helper.h:
+
+/Users/yenchia/esp/esp-idf/components/nghttp/private_include/config.h:
+
+/Users/yenchia/esp/esp-idf/components/nghttp/nghttp2/lib/includes/nghttp2/nghttp2.h:
+
+/Users/yenchia/esp/esp-idf/components/nghttp/port/include/nghttp2/nghttp2ver.h:
+
+/Users/yenchia/esp/esp-idf/components/nghttp/nghttp2/lib/nghttp2_mem.h:
+
+/Users/yenchia/esp/esp-idf/components/newlib/platform_include/assert.h:
+
+/Users/yenchia/esp/esp-idf/examples/bluetooth/bluedroid/ble/gatt_client/build/include/sdkconfig.h:
+
+/Users/yenchia/esp/esp-idf/components/esp_common/include/esp_compiler.h:
+
+/Users/yenchia/esp/esp-idf/components/nghttp/nghttp2/lib/nghttp2_net.h:
+/Users/yenchia/esp/esp-idf/components/nghttp/nghttp2/lib/nghttp2_helper.c:

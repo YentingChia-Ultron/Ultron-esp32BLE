@@ -1,0 +1,13 @@
+# Target labels
+ bootloader
+# Source files and their labels
+/Users/yenchia/esp/esp-idf/examples/bluetooth/bluedroid/ble/gatt_server/build/CMakeFiles/bootloader
+/Users/yenchia/esp/esp-idf/examples/bluetooth/bluedroid/ble/gatt_server/build/CMakeFiles/bootloader.rule
+/Users/yenchia/esp/esp-idf/examples/bluetooth/bluedroid/ble/gatt_server/build/CMakeFiles/bootloader-complete.rule
+/Users/yenchia/esp/esp-idf/examples/bluetooth/bluedroid/ble/gatt_server/build/bootloader-prefix/src/bootloader-stamp/bootloader-install.rule
+/Users/yenchia/esp/esp-idf/examples/bluetooth/bluedroid/ble/gatt_server/build/bootloader-prefix/src/bootloader-stamp/bootloader-mkdir.rule
+/Users/yenchia/esp/esp-idf/examples/bluetooth/bluedroid/ble/gatt_server/build/bootloader-prefix/src/bootloader-stamp/bootloader-download.rule
+/Users/yenchia/esp/esp-idf/examples/bluetooth/bluedroid/ble/gatt_server/build/bootloader-prefix/src/bootloader-stamp/bootloader-update.rule
+/Users/yenchia/esp/esp-idf/examples/bluetooth/bluedroid/ble/gatt_server/build/bootloader-prefix/src/bootloader-stamp/bootloader-patch.rule
+/Users/yenchia/esp/esp-idf/examples/bluetooth/bluedroid/ble/gatt_server/build/bootloader-prefix/src/bootloader-stamp/bootloader-configure.rule
+/Users/yenchia/esp/esp-idf/examples/bluetooth/bluedroid/ble/gatt_server/build/bootloader-prefix/src/bootloader-stamp/bootloader-build.rule
