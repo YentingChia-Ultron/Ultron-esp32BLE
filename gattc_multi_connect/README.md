@@ -90,6 +90,21 @@ struct remote_device {
     把`allConnected`改名為`connectedNum`，比較貼合功能
 
 
+## 修改 connID bug
+* commit: ver.07
+* changed file : ```../files/gattc_multi_connect```
+* config要改：
+    * 同上
+* 要改的全域
+    * 同上
+* 修改
+    * 在斷線時：```gl_profile_tab[i].conn_id = -1```
+    * scan時：以```conn_id == -1```來判斷連上之後的```conn_id```
+        * 系統的``conn_id``為由小而大填上，以連上的id不會因為其他人斷線而改變
+* 新增
+    * ```gl_profile_tab[i].connectTo```來判斷連線上的裝置是哪個
+
+
 -----
 * [Reference : ESP-IDF Gatt Client Multi Connection Demo](https://github.com/espressif/esp-idf/tree/master/examples/bluetooth/bluedroid/ble/gattc_multi_connect)
 
