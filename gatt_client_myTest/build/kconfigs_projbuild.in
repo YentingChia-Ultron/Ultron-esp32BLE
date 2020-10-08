@@ -1,0 +1,5 @@
+source "/Users/yenchia/esp/esp-idf/components/app_update/Kconfig.projbuild"
+source "/Users/yenchia/esp/esp-idf/components/bootloader/Kconfig.projbuild"
+source "/Users/yenchia/esp/esp-idf/components/esptool_py/Kconfig.projbuild"
+source "/Users/yenchia/esp/Ultron-esp32BLE/gatt_client_myTest/main/Kconfig.projbuild"
+source "/Users/yenchia/esp/esp-idf/components/partition_table/Kconfig.projbuild"
