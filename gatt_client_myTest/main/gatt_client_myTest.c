@@ -21,6 +21,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <time.h>
 #include "nvs.h"
 #include "nvs_flash.h"
 
@@ -50,6 +51,9 @@ static bool get_server = false;
 static esp_gattc_char_elem_t *char_elem_result   = NULL;
 static esp_gattc_descr_elem_t *descr_elem_result = NULL;
 static bool isActivating = 0; 
+static uint16_t myTime = 0;
+static uint16_t myTick = 0;
+
 
 /* Declare static functions */
 static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param);
@@ -182,8 +186,8 @@ static void ultron_activate(uint8_t *data)
         }
         if((lastInd + 1)!= ((data[0] << 8) | data[1]))
         {
-            ESP_LOGW(GATTC_TAG, "ultron active index different");
-            ESP_LOGW(GATTC_TAG,"last : %04X, now : %04X\n", lastInd, ((data[0] << 8) | data[1]));
+            ESP_LOGE(GATTC_TAG, "ultron active index different");
+            ESP_LOGE(GATTC_TAG,"last : %04X, now : %04X\n", lastInd, ((data[0] << 8) | data[1]));
             err_cnt++;
             send_command(activate_cmd[0], sizeof(activate_cmd[0]));
             return;
@@ -194,10 +198,10 @@ static void ultron_activate(uint8_t *data)
         {
             if(now_len >= activate_len)
             {
-                printf("\n------ activate data set done ------\ni : %d\nactivate_len : %d\nnow_len : %d \ndata:\n", i, activate_len, now_len);
-                for(int j = 0; j < activate_len; j++)
-                    printf("%02X ", ultron_activate_data[j]);
-                printf("\n------------------\n");
+                printf("\n------ activate data set done ------\ni : %d\nactivate_len : %d\nnow_len : %d \ntime : %d.%d s\n", i, activate_len, now_len, (myTime - myTick)/10, (myTime - myTick)%10);
+                // for(int j = 0; j < activate_len; j++)
+                //     printf("%02X ", ultron_activate_data[j]);
+                // printf("\n------------------\n");
                 isActivating = 0;
                 return;
             }
@@ -571,16 +575,18 @@ static void sendActivateButtCmd(void *pvParameters)
         bool buttState = gpio_get_level(BUTTON0);
         if(isActivating == 0 && buttState == 0 && lastState != buttState)
         { 
+            printf("send activate butt cmd\n");
             ESP_LOGW(GATTC_TAG, "send activate butt cmd");
             send_command(activate_cmd[0], sizeof(activate_cmd[0]));
             isActivating = 1;
+            myTick = myTime;
             request_read();
         }
         lastState = buttState;
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        myTime++;
+        vTaskDelay(100 / portTICK_PERIOD_MS);
     }
 }
-
 
 
 void app_main(void)
