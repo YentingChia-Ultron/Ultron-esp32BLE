@@ -36,16 +36,23 @@
 #include "freertos/task.h"
 #include "driver/gpio.h"
 
+#include "cli.h"
+
+
 #define GATTC_TAG "GATTC_DEMO"
-#define REMOTE_SERVICE_UUID        0xFFF0
-#define REMOTE_NOTIFY_CHAR_UUID    0xFFF1
+// #define REMOTE_SERVICE_UUID        0xFFF0
+// #define REMOTE_NOTIFY_CHAR_UUID    0xFFF1
+#define REMOTE_SERVICE_UUID        {0x23, 0xD1, 0xBC, 0xEA, 0x5F, 0x78, 0x23, 0x15, 0xDE, 0xEF, 0x12, 0x12, 0x23, 0x15, 0, 0}
+#define REMOTE_NOTIFY_CHAR_UUID    {0x23, 0xD1, 0xBC, 0xEA, 0x5F, 0x78, 0x23, 0x15, 0xDE, 0xEF, 0x12, 0x12, 0x24, 0x15, 0, 0}
 #define PROFILE_NUM      1
 #define PROFILE_A_APP_ID 0
 #define INVALID_HANDLE   0
 
 #define BUTTON0   2
 
-static const char remote_device_name[] = "UTXXXX-XXXXXXX";
+// static const char remote_device_name[] = "UTXXXX-XXXXXXX";
+static const char remote_device_name[] = "FORA IR42";
+static const uint8_t remote_device_bda[6] = {0xC0, 0x26, 0xDa, 0x0C, 0x16, 0x36};
 static bool connect    = false;
 static bool get_server = false;
 static esp_gattc_char_elem_t *char_elem_result   = NULL;
@@ -54,6 +61,7 @@ static bool isActivating = 0;
 static uint16_t myTime = 0;
 static uint16_t myTick = 0;
 
+static const uint8_t remote_service_uuid[ESP_UUID_LEN_128] = REMOTE_SERVICE_UUID;
 
 /* Declare static functions */
 static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param);
@@ -62,13 +70,13 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
 
 
 static esp_bt_uuid_t remote_filter_service_uuid = {
-    .len = ESP_UUID_LEN_16,
-    .uuid = {.uuid16 = REMOTE_SERVICE_UUID,},
+    .len = ESP_UUID_LEN_128,
+    .uuid = {.uuid128 = REMOTE_SERVICE_UUID,},
 };
 
 static esp_bt_uuid_t remote_filter_char_uuid = {
-    .len = ESP_UUID_LEN_16,
-    .uuid = {.uuid16 = REMOTE_NOTIFY_CHAR_UUID,},
+    .len = ESP_UUID_LEN_128,
+    .uuid = {.uuid128 = REMOTE_NOTIFY_CHAR_UUID,},
 };
 
 static esp_bt_uuid_t notify_descr_uuid = {
@@ -250,7 +258,7 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
             break;
         }
         ESP_LOGI(GATTC_TAG, "discover service complete conn_id %d", param->dis_srvc_cmpl.conn_id);
-        esp_ble_gattc_search_service(gattc_if, param->cfg_mtu.conn_id, &remote_filter_service_uuid);
+        esp_ble_gattc_search_service(gattc_if, param->cfg_mtu.conn_id, NULL);
         break;
     case ESP_GATTC_CFG_MTU_EVT:
         if (param->cfg_mtu.status != ESP_GATT_OK){
@@ -259,9 +267,51 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
         ESP_LOGI(GATTC_TAG, "ESP_GATTC_CFG_MTU_EVT, Status %d, MTU %d, conn_id %d", param->cfg_mtu.status, param->cfg_mtu.mtu, param->cfg_mtu.conn_id);
         break;
     case ESP_GATTC_SEARCH_RES_EVT: {
+
+
+        printf("\n--------------------------\n");
+        printf("\nsearch_res: ");
+        printf("%X", p_data->search_res.srvc_id.uuid.uuid.uuid16);
+        printf("\n...\n");
+        for(int i =0 ; i<ESP_UUID_LEN_128;i++)
+        printf("%X ",p_data->search_res.srvc_id.uuid.uuid.uuid128[i]);
+        printf("\n");
+        uint16_t mycount = 0;
+        esp_gattc_char_elem_t *myresult = NULL;
+        uint16_t char_offset = 0;
+        esp_ble_gattc_get_attr_count( gattc_if,
+                                      p_data->search_res.conn_id,
+                                      ESP_GATT_DB_ALL,
+                                      p_data->search_res.start_handle,
+                                      p_data->search_res.end_handle,
+                                      INVALID_HANDLE,
+                                      &mycount);
+        printf("count : %d\n",mycount);
+        myresult = (esp_gattc_char_elem_t *)malloc(sizeof(esp_gattc_char_elem_t) * mycount);
+        esp_gatt_status_t status = esp_ble_gattc_get_all_char( gattc_if,
+                                    p_data->search_res.conn_id,
+                                    p_data->search_res.start_handle,
+                                    p_data->search_res.end_handle,
+                                    myresult,
+                                    &mycount, char_offset);
+        if (status != ESP_GATT_OK){
+                printf("esp_ble_gattc_get_all_char error %2X\n",status);
+            }
+            else{
+                for(int i = 0; i < mycount; i++){
+                printf("CHAR[%d] UUID : %2X\n", i, myresult[i].uuid.uuid.uuid16);
+                printf("\n.....\n");
+                    for(int j =0 ; j<ESP_UUID_LEN_128;j++)
+                        printf("%X ",myresult[i].uuid.uuid.uuid128[j]);
+                }
+                printf("\n");
+            }
+        free(myresult);
+        printf("\n--------------------------\n");
+
         ESP_LOGI(GATTC_TAG, "SEARCH RES: conn_id = %x is primary service %d", p_data->search_res.conn_id, p_data->search_res.is_primary);
         ESP_LOGI(GATTC_TAG, "start handle %d end handle %d current handle value %d", p_data->search_res.start_handle, p_data->search_res.end_handle, p_data->search_res.srvc_id.inst_id);
-        if (p_data->search_res.srvc_id.uuid.len == ESP_UUID_LEN_16 && p_data->search_res.srvc_id.uuid.uuid.uuid16 == REMOTE_SERVICE_UUID) {
+        if (memcmp(p_data->search_res.srvc_id.uuid.uuid.uuid128, remote_service_uuid, ESP_UUID_LEN_128) == 0) {
             ESP_LOGI(GATTC_TAG, "service found");
             get_server = true;
             gl_profile_tab[PROFILE_A_APP_ID].service_start_handle = p_data->search_res.start_handle;
@@ -391,6 +441,10 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
             ESP_LOGI(GATTC_TAG, "ESP_GATTC_NOTIFY_EVT, receive indicate value:");
         }
         esp_log_buffer_hex(GATTC_TAG, p_data->notify.value, p_data->notify.value_len);
+        printf("\nnotify: ");
+        for(int i = 0; i < p_data->notify.value_len; i++)
+            printf("%02X ", p_data->notify.value[i]);
+        printf("\n");
         break;
     case ESP_GATTC_WRITE_DESCR_EVT:
         if (p_data->write.status != ESP_GATT_OK){
@@ -429,6 +483,9 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
         connect = false;
         get_server = false;
         ESP_LOGI(GATTC_TAG, "ESP_GATTC_DISCONNECT_EVT, reason = %d", p_data->disconnect.reason);
+        printf("DISCONNECT!\n");
+        uint32_t duration = 30;
+        esp_ble_gap_start_scanning(duration);
         break;
     case ESP_GATTC_READ_CHAR_EVT:
         if (p_data->read.status != ESP_GATT_OK){
@@ -470,12 +527,12 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
         esp_ble_gap_cb_param_t *scan_result = (esp_ble_gap_cb_param_t *)param;
         switch (scan_result->scan_rst.search_evt) {
         case ESP_GAP_SEARCH_INQ_RES_EVT:
-            esp_log_buffer_hex(GATTC_TAG, scan_result->scan_rst.bda, 6);
-            ESP_LOGI(GATTC_TAG, "searched Adv Data Len %d, Scan Response Len %d", scan_result->scan_rst.adv_data_len, scan_result->scan_rst.scan_rsp_len);
+            // esp_log_buffer_hex(GATTC_TAG, scan_result->scan_rst.bda, 6);
+            // ESP_LOGI(GATTC_TAG, "searched Adv Data Len %d, Scan Response Len %d", scan_result->scan_rst.adv_data_len, scan_result->scan_rst.scan_rsp_len);
             adv_name = esp_ble_resolve_adv_data(scan_result->scan_rst.ble_adv,
                                                 ESP_BLE_AD_TYPE_NAME_CMPL, &adv_name_len);
-            ESP_LOGI(GATTC_TAG, "searched Device Name Len %d", adv_name_len);
-            esp_log_buffer_char(GATTC_TAG, adv_name, adv_name_len);
+            // ESP_LOGI(GATTC_TAG, "searched Device Name Len %d", adv_name_len);
+            // esp_log_buffer_char(GATTC_TAG, adv_name, adv_name_len);
 
 #if CONFIG_EXAMPLE_DUMP_ADV_DATA_AND_SCAN_RESP
             if (scan_result->scan_rst.adv_data_len > 0) {
@@ -487,10 +544,11 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
                 esp_log_buffer_hex(GATTC_TAG, &scan_result->scan_rst.ble_adv[scan_result->scan_rst.adv_data_len], scan_result->scan_rst.scan_rsp_len);
             }
 #endif
-            ESP_LOGI(GATTC_TAG, "\n");
+            // ESP_LOGI(GATTC_TAG, "\n");
 
             if (adv_name != NULL) {
-                if (strncmp((char *)adv_name, remote_device_name, adv_name_len) == 0) {
+                if (memcmp(scan_result->scan_rst.bda, remote_device_bda, 6) == 0) {
+                    printf("find!\n");
                     ESP_LOGI(GATTC_TAG, "searched device %s\n", remote_device_name);
                     if (connect == false) {
                         connect = true;
@@ -588,9 +646,29 @@ static void sendActivateButtCmd(void *pvParameters)
     }
 }
 
+uint8_t sendCmdByKeyboard( char** args, uint8_t numArgs ){
+    char hex[] = "1A";                          
+    char num = (char)strtol(hex, NULL, 16);      
+    if(numArgs == 1)
+        return;
+    char cmd[20] = {0};
+    for(int i = 1; i < numArgs; i++)
+    {
+        cmd[i - 1] = (char)strtol(args[i], NULL, 16); 
+    }
+    printf("\ncmd : ");
+    for(int i = 1; i < numArgs; i++)
+    {
+        printf("%02X ",cmd[i - 1]);
+    }
+    printf("\n\n");
+    send_command(cmd, numArgs - 1);
+    return 0;
+}
 
 void app_main(void)
 {
+
     // Initialize NVS.
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
@@ -653,7 +731,11 @@ void app_main(void)
     gpio_set_pull_mode(BUTTON0, GPIO_PULLUP_ONLY);
     gpio_set_direction(BUTTON0, GPIO_MODE_INPUT);
 
-    xTaskCreate(&sendActivateButtCmd, "sendActivateButtCmd", 4096, NULL, 15, NULL);
+    //xTaskCreate(&sendActivateButtCmd, "sendActivateButtCmd", 4096, NULL, 15, NULL);
+    init_cli();
+    char sendCmd[] = "sc";
+    cmd_register(sendCmd, sendCmdByKeyboard);
+
 
 }
 
