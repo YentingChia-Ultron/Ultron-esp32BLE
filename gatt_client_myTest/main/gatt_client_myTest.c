@@ -37,6 +37,8 @@
 #include "driver/gpio.h"
 
 #include "cli.h"
+#include "foraThermometer.h"
+
 
 
 #define GATTC_TAG "GATTC_DEMO"
@@ -60,6 +62,9 @@ static esp_gattc_descr_elem_t *descr_elem_result = NULL;
 static bool isActivating = 0; 
 static uint16_t myTime = 0;
 static uint16_t myTick = 0;
+
+
+bool getFora = false;
 
 static const uint8_t remote_service_uuid[ESP_UUID_LEN_128] = REMOTE_SERVICE_UUID;
 
@@ -113,16 +118,17 @@ static struct gattc_profile_inst gl_profile_tab[PROFILE_NUM] = {
 };
 
 
-static void send_command(char *cmd, int len) {
-    uint8_t write_char_data[len];
+static void send_command(const uint8_t *cmd, int len) {
+    printf("\nsend cmd : ");
     for(int i = 0 ; i < len ; i++) {
-        write_char_data[i] = cmd[i];
+        printf("%02X ", cmd[i]);
     }
+    printf("\n");
     esp_ble_gattc_write_char( gl_profile_tab[PROFILE_A_APP_ID].gattc_if,
                               gl_profile_tab[PROFILE_A_APP_ID].conn_id,
                               gl_profile_tab[PROFILE_A_APP_ID].char_handle,
-                              sizeof(write_char_data),
-                              write_char_data,
+                              len,
+                              cmd,
                               ESP_GATT_WRITE_TYPE_RSP,
                               ESP_GATT_AUTH_REQ_NONE);
 }
@@ -154,7 +160,7 @@ static uint8_t err_cnt = 0;
 static uint8_t ultron_activate_data[5120] = {0};
 static uint16_t lastInd = 0;
 static uint16_t activate_len = 0;
-const char activate_cmd[2][10] = {"start_act", "trans_act"}; //start_act, trans_act
+const uint8_t activate_cmd[2][10] = {"start_act", "trans_act"}; //start_act, trans_act
 static void ultron_activate(uint8_t *data)
 {
     if(err_cnt > 10)
@@ -441,7 +447,15 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
             ESP_LOGI(GATTC_TAG, "ESP_GATTC_NOTIFY_EVT, receive indicate value:");
         }
         esp_log_buffer_hex(GATTC_TAG, p_data->notify.value, p_data->notify.value_len);
-        printf("\nnotify: ");
+        if(p_data->notify.value_len == 8 && p_data->notify.value[0] == 0x51 && p_data->notify.value[6] == 0xA5)
+        {
+            if(setAllData(p_data->notify.value))
+                getFora = true;
+            else
+                printf("FORA data error\n");
+            
+        }
+        printf("notify: ");
         for(int i = 0; i < p_data->notify.value_len; i++)
             printf("%02X ", p_data->notify.value[i]);
         printf("\n");
@@ -647,22 +661,75 @@ static void sendActivateButtCmd(void *pvParameters)
 }
 
 uint8_t sendCmdByKeyboard( char** args, uint8_t numArgs ){
-    char hex[] = "1A";                          
-    char num = (char)strtol(hex, NULL, 16);      
     if(numArgs == 1)
         return;
-    char cmd[20] = {0};
+    uint8_t cmd[20] = {0};
     for(int i = 1; i < numArgs; i++)
     {
         cmd[i - 1] = (char)strtol(args[i], NULL, 16); 
     }
-    printf("\ncmd : ");
-    for(int i = 1; i < numArgs; i++)
-    {
-        printf("%02X ",cmd[i - 1]);
-    }
-    printf("\n\n");
     send_command(cmd, numArgs - 1);
+    return 0;
+}
+
+unsigned int countTick = 0;
+static void countTime(void *pvParameters)
+{
+    while(1)
+    {
+        countTick++;
+        if(countTick == INT32_MAX - 1)
+            countTick = 0;
+        vTaskDelay(100 / portTICK_PERIOD_MS);
+    }
+    
+}
+
+unsigned int foraTime = 0;
+uint16_t nowForaNum;
+uint8_t sendForaCmd( char** args, uint8_t numArgs ){ 
+    printf("\nsend FORA cmds.\n");
+    uint16_t index = 0; 
+    int count = 0;
+    uint8_t cmds[4][8] = {
+        {0x51, 0x2B, 0x00, 0x00, 0x00, 0x00, 0xA3, 0x1F},         //read data num
+        {0x51, 0x25, 0, 0, 0x00, 0x00, 0xA3, 0x19},  //read time[index]
+        {0x51, 0x26, 0, 0, 0x00, 0x00, 0xA3, 0x1A},  //read time[index]
+        {0x51, 0x52, 0x00, 0x00, 0x00, 0x00, 0xA3, 0x46}};        //clear all
+    
+
+    foraTime = countTick;
+    send_command(cmds[0], 8);
+    while(countTick < (foraTime + 1)); //wait 100ms
+    nowForaNum = getDataNum();
+    printf("num : %d\n", nowForaNum);
+    foraTime = countTick;
+    for(uint16_t i = 0; i < nowForaNum; i++)
+    {
+        uint8_t check;
+        cmds[1][2] = i & 0xff;
+        cmds[1][3] = i >> 8;
+        check = getCheckSum(cmds[1]);
+        cmds[1][7] = check;
+
+        cmds[2][2] = i & 0xff;
+        cmds[2][3] = i >> 8;
+        check = getCheckSum(cmds[2]);
+        cmds[2][7] = check;
+
+        // while(countTick < (foraTime + 10)); //wait 200ms
+        send_command(cmds[1], 8);
+        // while(countTick < (foraTime + 10)); //wait 200ms
+        send_command(cmds[2], 8);
+    }
+    // while(countTick < (foraTime + 10)); //wait 200ms
+    send_command(cmds[3], 8);
+    return 0;
+}
+
+
+uint8_t printFora( char** args, uint8_t numArgs ){ 
+    printAllForaData();
     return 0;
 }
 
@@ -732,10 +799,14 @@ void app_main(void)
     gpio_set_direction(BUTTON0, GPIO_MODE_INPUT);
 
     //xTaskCreate(&sendActivateButtCmd, "sendActivateButtCmd", 4096, NULL, 15, NULL);
+    xTaskCreate(&countTime, "countTime", 4096, NULL, 15, NULL);
     init_cli();
     char sendCmd[] = "sc";
     cmd_register(sendCmd, sendCmdByKeyboard);
-
+    char foraCmd[] = "fora";
+    cmd_register(foraCmd, sendForaCmd);
+    char foraPrintCmd[] = "forap";
+    cmd_register(foraPrintCmd, printFora);
 
 }
 
