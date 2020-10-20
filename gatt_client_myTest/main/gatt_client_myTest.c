@@ -54,7 +54,8 @@
 
 // static const char remote_device_name[] = "UTXXXX-XXXXXXX";
 static const char remote_device_name[] = "FORA IR42";
-static const uint8_t remote_device_bda[6] = {0xC0, 0x26, 0xDa, 0x0C, 0x16, 0x36};
+// static const uint8_t remote_device_bda[6] = {0xC0, 0x26, 0xDA, 0x0C, 0x16, 0x36};  //fora th
+static const uint8_t remote_device_bda[6] = {0xC0, 0x26, 0xDA, 0x03, 0x98, 0x71};  //fora blood
 static bool connect    = false;
 static bool get_server = false;
 static esp_gattc_char_elem_t *char_elem_result   = NULL;
@@ -687,8 +688,8 @@ static void countTime(void *pvParameters)
 
 unsigned int foraTime = 0;
 uint16_t nowForaNum;
-uint8_t sendForaCmd( char** args, uint8_t numArgs ){ 
-    printf("\nsend FORA cmds.\n");
+uint8_t sf( char** args, uint8_t numArgs ){ 
+    printf("\nsend FORA TH cmds.\n");
     uint16_t index = 0; 
     int count = 0;
     uint8_t cmds[4][8] = {
@@ -717,16 +718,26 @@ uint8_t sendForaCmd( char** args, uint8_t numArgs ){
         check = getCheckSum(cmds[2]);
         cmds[2][7] = check;
 
-        // while(countTick < (foraTime + 10)); //wait 200ms
         send_command(cmds[1], 8);
-        // while(countTick < (foraTime + 10)); //wait 200ms
         send_command(cmds[2], 8);
     }
-    // while(countTick < (foraTime + 10)); //wait 200ms
     send_command(cmds[3], 8);
     return 0;
 }
 
+uint8_t bp( char** args, uint8_t numArgs ){ 
+    printf("\nsend FORA BP cmds.\n");
+    uint16_t index = 0; 
+    int count = 0;
+    uint8_t cmds[4][8] = {
+        {0x51, 0x2B, 0x00, 0x00, 0x00, 0x00, 0xA3, 0x1F},         //read data num
+        {0x51, 0x25, 0, 0, 0x00, 0x00, 0xA3, 0x19},  //read time[index]
+        {0x51, 0x26, 0, 0, 0x00, 0x00, 0xA3, 0x1A},  //read time[index]
+        {0x51, 0x52, 0x00, 0x00, 0x00, 0x00, 0xA3, 0x46}};        //clear all
+    send_command(cmds[0], 8);
+
+    return 0;
+}
 
 uint8_t printFora( char** args, uint8_t numArgs ){ 
     printAllForaData();
@@ -803,10 +814,12 @@ void app_main(void)
     init_cli();
     char sendCmd[] = "sc";
     cmd_register(sendCmd, sendCmdByKeyboard);
-    char foraCmd[] = "fora";
-    cmd_register(foraCmd, sendForaCmd);
-    char foraPrintCmd[] = "forap";
+    char foraCmd[] = "ft";
+    cmd_register(foraCmd, sf);
+    char foraPrintCmd[] = "ftp";
     cmd_register(foraPrintCmd, printFora);
+    char foraCmd2[] = "fb";
+    cmd_register(foraCmd2, bp);
 
 }
 

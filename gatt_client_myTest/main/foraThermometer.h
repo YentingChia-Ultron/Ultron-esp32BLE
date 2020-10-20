@@ -32,6 +32,28 @@ uint8_t setAllData(const uint8_t *data);
 void printAllForaData();
 
 /*
+status:
+0 : wait
+1 : read store data num
+2 : read time & other
+3 : read temp
+4 : clear
+*/
+uint8_t getStatus();
+void setStatus(uint8_t s);
+void waitData();
+
+/* 
+type :
+0 : read store data num
+1 : read time & other
+2 : read temp
+3 : clear
+4 : init
+*/
+void getForaCmd(uint8_t type, uint8_t *buf);
+
+/*
 data type
 0 : temperature type
 1 : unit ( 0 : Celsius(°C) , 1 : Fahrenheit (°F) )
@@ -44,3 +66,6 @@ data type
 8 : background temperature  ( Unit=0.1°C )
 */
 uint16_t getForaData(const uint8_t type, const uint16_t index);
+
+uint8_t sendForaCmd();
+

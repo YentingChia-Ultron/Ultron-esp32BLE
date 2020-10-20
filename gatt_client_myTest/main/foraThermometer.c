@@ -1,12 +1,17 @@
 #include "foraThermometer.h"
 
-uint16_t dataNum = 0;
-
-
-
-
+static uint16_t dataNum = 0;
 struct foraData myData[100];
+static uint8_t status = 0;
 static uint16_t nowIndex = 0;
+
+
+static const uint8_t cmds[5][8] = {
+    {0x51, 0x2B, 0x00, 0x00, 0x00, 0x00, 0xA3, 0x1F},         //read data num
+    {0x51, 0x25, 0, 0, 0x00, 0x00, 0xA3, 0x19},               //read time[index]
+    {0x51, 0x26, 0, 0, 0x00, 0x00, 0xA3, 0x1A},               //read time[index]
+    {0x51, 0x52, 0x00, 0x00, 0x00, 0x00, 0xA3, 0x46},         //clear all
+    {0x51, 0x24, 0x00, 0x00, 0x00, 0x00, 0xA3, 0x18}};        //init (read mode)
 
 uint16_t getDataNum()
 {
@@ -46,17 +51,22 @@ uint8_t setAllData(const uint8_t *data) //return 1 : ok, return 0 : error
             switch (data[1])
             {
                 case 0x2B:
+                    nowIndex = 0;
                     setDataNum(data);
+                    status = 1;
                     break;
                 case 0x25:
                     setOtherData(data, nowIndex);
+                    status = 2;
                     break;
                 case 0x26:
                     setTempData(data, nowIndex);
+                    status = 3;
                     nowIndex++;
                     break;
                 case 0x52:
-                    nowIndex = 0;
+                    //nowIndex = 0;
+                    status = 4;
                     break;
                 default:
                     break;
@@ -169,3 +179,18 @@ void printAllForaData()
     }
 }
 
+
+uint8_t getStatus()
+{
+    return status;
+}
+
+void waitData()
+{
+    status = 0;
+}
+
+void getForaCmd(uint8_t type, uint8_t *buf)
+{
+    memcpy(buf, cmds[type], 8);
+}
