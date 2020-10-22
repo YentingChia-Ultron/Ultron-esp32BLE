@@ -3,7 +3,7 @@
 # project subdirectory.
 #
 
-PROJECT_NAME := gatt_client_myTest
+PROJECT_NAME := gatt_client_fora
 
 COMPONENT_ADD_INCLUDEDIRS := components/include
 
