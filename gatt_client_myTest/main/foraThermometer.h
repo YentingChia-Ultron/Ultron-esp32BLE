@@ -1,10 +1,12 @@
+#ifndef FORA_THMETER_H
+#define FORA_THMETER_H
 #include <stdint.h>
 #include <string.h>
 #include <stdbool.h>
 #include <stdio.h>
 
 /* 
-foraData.type : 
+foraMeterData.type : 
 1. Value=0, means ear temperature.
 2. Value=1, means forehead temperature.
 3. Value=2, means rectal temperature.
@@ -13,7 +15,7 @@ foraData.type :
 6. Value=5, means room temperature.
 7. Value=6, means children temperature.
 */
-struct foraData
+struct foraMeterData
 {
     uint8_t type; 
     uint8_t outUint;                    //0 : Celsius(°C) , 1 : Fahrenheit (°F)
@@ -26,10 +28,10 @@ struct foraData
     uint16_t backgroundTemperature;    // Unit=0.1°C
 };
 
-uint16_t getDataNum();
-uint8_t getCheckSum(const uint8_t *data);
-uint8_t setAllData(const uint8_t *data);
-void printAllForaData();
+uint16_t getForaMeterDataNum();
+uint8_t getForaCheckSum(const uint8_t *data);
+uint8_t setAllForaMeterData(const uint8_t *data);
+void printAllForaMeterData();
 
 /*
 status:
@@ -39,9 +41,8 @@ status:
 3 : read temp
 4 : clear
 */
-uint8_t getStatus();
-void setStatus(uint8_t s);
-void waitData();
+uint8_t getForaMeterStatus();
+void waitForaMeterData();
 
 /* 
 type :
@@ -51,7 +52,7 @@ type :
 3 : clear
 4 : init
 */
-void getForaCmd(uint8_t type, uint8_t *buf);
+void getForaMeterCmd(uint8_t type, uint8_t *buf);
 
 /*
 data type
@@ -65,7 +66,6 @@ data type
 7 : object temperature  ( Unit=0.1°C )
 8 : background temperature  ( Unit=0.1°C )
 */
-uint16_t getForaData(const uint8_t type, const uint16_t index);
+uint16_t getForaMeteData(const uint8_t type, const uint16_t index);
 
-uint8_t sendForaCmd();
-
+#endif  /*  FORA_THMETER_H  */

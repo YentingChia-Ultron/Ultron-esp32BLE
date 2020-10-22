@@ -1,7 +1,7 @@
 #include "foraThermometer.h"
 
 static uint16_t dataNum = 0;
-struct foraData myData[100];
+struct foraMeterData myData[100];
 static uint8_t status = 0;
 static uint16_t nowIndex = 0;
 
@@ -13,7 +13,7 @@ static const uint8_t cmds[5][8] = {
     {0x51, 0x52, 0x00, 0x00, 0x00, 0x00, 0xA3, 0x46},         //clear all
     {0x51, 0x24, 0x00, 0x00, 0x00, 0x00, 0xA3, 0x18}};        //init (read mode)
 
-uint16_t getDataNum()
+uint16_t getForaMeterDataNum()
 {
     return dataNum;
 }
@@ -41,7 +41,7 @@ static void setTempData(const uint8_t *data, const uint16_t index)
     myData[index].backgroundTemperature = (data[5] << 8) + data[4];
 }
 
-uint8_t setAllData(const uint8_t *data) //return 1 : ok, return 0 : error
+uint8_t setAllForaMeterData(const uint8_t *data) //return 1 : ok, return 0 : error
 {
     uint16_t check = 0;
     for(int i = 0; i < 7; i++)
@@ -77,7 +77,7 @@ uint8_t setAllData(const uint8_t *data) //return 1 : ok, return 0 : error
     return 1;
 }
 
-uint8_t getCheckSum(const uint8_t *data)
+uint8_t getForaCheckSum(const uint8_t *data)
 {
     uint16_t ret = 0;
     for(uint8_t i = 0; i < 7; i++)
@@ -86,7 +86,7 @@ uint8_t getCheckSum(const uint8_t *data)
 }
 
 
-uint16_t getForaData(const uint8_t type, const uint16_t index)
+uint16_t getForaMeteData(const uint8_t type, const uint16_t index)
 {
     switch (type)
     {
@@ -153,7 +153,7 @@ static void getTypeStr(uint8_t type, char *str)
     }
 }
 
-void printAllForaData()
+void printAllForaMeterData()
 {
     if(dataNum == 0)
         printf("\n<<no data>>\n");
@@ -180,17 +180,17 @@ void printAllForaData()
 }
 
 
-uint8_t getStatus()
+uint8_t getForaMeterStatus()
 {
     return status;
 }
 
-void waitData()
+void waitForaMeterData()
 {
     status = 0;
 }
 
-void getForaCmd(uint8_t type, uint8_t *buf)
+void getForaMeterCmd(uint8_t type, uint8_t *buf)
 {
     memcpy(buf, cmds[type], 8);
 }

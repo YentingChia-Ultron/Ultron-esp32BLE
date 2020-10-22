@@ -71,7 +71,9 @@ gatt_client_myTest.o: \
  /Users/yenchia/esp/esp-idf/components/soc/esp32/include/soc/gpio_caps.h \
  /Users/yenchia/esp/esp-idf/components/soc/esp32/include/soc/gpio_sig_map.h \
  /Users/yenchia/esp/esp-idf/components/soc/include/hal/gpio_types.h \
- /Users/yenchia/esp/esp-idf/components/esp_rom/include/esp32/rom/gpio.h
+ /Users/yenchia/esp/esp-idf/components/esp_rom/include/esp32/rom/gpio.h \
+ /Users/yenchia/esp/Ultron-esp32BLE/gatt_client_myTest/main/cli.h \
+ /Users/yenchia/esp/Ultron-esp32BLE/gatt_client_myTest/main/fora.h
 
 /Users/yenchia/esp/esp-idf/components/newlib/platform_include/time.h:
 
@@ -216,4 +218,8 @@ gatt_client_myTest.o: \
 /Users/yenchia/esp/esp-idf/components/soc/include/hal/gpio_types.h:
 
 /Users/yenchia/esp/esp-idf/components/esp_rom/include/esp32/rom/gpio.h:
+
+/Users/yenchia/esp/Ultron-esp32BLE/gatt_client_myTest/main/cli.h:
+
+/Users/yenchia/esp/Ultron-esp32BLE/gatt_client_myTest/main/fora.h:
 /Users/yenchia/esp/Ultron-esp32BLE/gatt_client_myTest/main/./gatt_client_myTest.c:

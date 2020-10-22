@@ -37,7 +37,7 @@
 #include "driver/gpio.h"
 
 #include "cli.h"
-#include "foraThermometer.h"
+#include "fora.h"
 
 
 
@@ -53,9 +53,12 @@
 #define BUTTON0   2
 
 // static const char remote_device_name[] = "UTXXXX-XXXXXXX";
-static const char remote_device_name[] = "FORA IR42";
+// static const char remote_device_name[] = "FORA IR42";
+static const char remote_device_name[] = "FORA D40";
+// static const char remote_device_name[] = "FORA P30 PLUS";
 // static const uint8_t remote_device_bda[6] = {0xC0, 0x26, 0xDA, 0x0C, 0x16, 0x36};  //fora th
-static const uint8_t remote_device_bda[6] = {0xC0, 0x26, 0xDA, 0x03, 0x98, 0x71};  //fora blood
+static const uint8_t remote_device_bda[6] = {0xC0, 0x26, 0xDA, 0x03, 0x98, 0x71};  //fora blood pressure
+// static const uint8_t remote_device_bda[6] = {0xC0, 0x26, 0xDA, 0x06, 0x56, 0x7C};  //fora blood pressure + glucose
 static bool connect    = false;
 static bool get_server = false;
 static esp_gattc_char_elem_t *char_elem_result   = NULL;
@@ -276,45 +279,45 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
     case ESP_GATTC_SEARCH_RES_EVT: {
 
 
-        printf("\n--------------------------\n");
-        printf("\nsearch_res: ");
-        printf("%X", p_data->search_res.srvc_id.uuid.uuid.uuid16);
-        printf("\n...\n");
-        for(int i =0 ; i<ESP_UUID_LEN_128;i++)
-        printf("%X ",p_data->search_res.srvc_id.uuid.uuid.uuid128[i]);
-        printf("\n");
-        uint16_t mycount = 0;
-        esp_gattc_char_elem_t *myresult = NULL;
-        uint16_t char_offset = 0;
-        esp_ble_gattc_get_attr_count( gattc_if,
-                                      p_data->search_res.conn_id,
-                                      ESP_GATT_DB_ALL,
-                                      p_data->search_res.start_handle,
-                                      p_data->search_res.end_handle,
-                                      INVALID_HANDLE,
-                                      &mycount);
-        printf("count : %d\n",mycount);
-        myresult = (esp_gattc_char_elem_t *)malloc(sizeof(esp_gattc_char_elem_t) * mycount);
-        esp_gatt_status_t status = esp_ble_gattc_get_all_char( gattc_if,
-                                    p_data->search_res.conn_id,
-                                    p_data->search_res.start_handle,
-                                    p_data->search_res.end_handle,
-                                    myresult,
-                                    &mycount, char_offset);
-        if (status != ESP_GATT_OK){
-                printf("esp_ble_gattc_get_all_char error %2X\n",status);
-            }
-            else{
-                for(int i = 0; i < mycount; i++){
-                printf("CHAR[%d] UUID : %2X\n", i, myresult[i].uuid.uuid.uuid16);
-                printf("\n.....\n");
-                    for(int j =0 ; j<ESP_UUID_LEN_128;j++)
-                        printf("%X ",myresult[i].uuid.uuid.uuid128[j]);
-                }
-                printf("\n");
-            }
-        free(myresult);
-        printf("\n--------------------------\n");
+        // printf("\n--------------------------\n");
+        // printf("\nsearch_res: ");
+        // printf("%X", p_data->search_res.srvc_id.uuid.uuid.uuid16);
+        // printf("\n...\n");
+        // for(int i =0 ; i<ESP_UUID_LEN_128;i++)
+        // printf("%X ",p_data->search_res.srvc_id.uuid.uuid.uuid128[i]);
+        // printf("\n");
+        // uint16_t mycount = 0;
+        // esp_gattc_char_elem_t *myresult = NULL;
+        // uint16_t char_offset = 0;
+        // esp_ble_gattc_get_attr_count( gattc_if,
+        //                               p_data->search_res.conn_id,
+        //                               ESP_GATT_DB_ALL,
+        //                               p_data->search_res.start_handle,
+        //                               p_data->search_res.end_handle,
+        //                               INVALID_HANDLE,
+        //                               &mycount);
+        // printf("count : %d\n",mycount);
+        // myresult = (esp_gattc_char_elem_t *)malloc(sizeof(esp_gattc_char_elem_t) * mycount);
+        // esp_gatt_status_t status = esp_ble_gattc_get_all_char( gattc_if,
+        //                             p_data->search_res.conn_id,
+        //                             p_data->search_res.start_handle,
+        //                             p_data->search_res.end_handle,
+        //                             myresult,
+        //                             &mycount, char_offset);
+        // if (status != ESP_GATT_OK){
+        //         printf("esp_ble_gattc_get_all_char error %2X\n",status);
+        //     }
+        //     else{
+        //         for(int i = 0; i < mycount; i++){
+        //         printf("CHAR[%d] UUID : %2X\n", i, myresult[i].uuid.uuid.uuid16);
+        //         printf("\n.....\n");
+        //             for(int j =0 ; j<ESP_UUID_LEN_128;j++)
+        //                 printf("%X ",myresult[i].uuid.uuid.uuid128[j]);
+        //         }
+        //         printf("\n");
+        //     }
+        // free(myresult);
+        // printf("\n--------------------------\n");
 
         ESP_LOGI(GATTC_TAG, "SEARCH RES: conn_id = %x is primary service %d", p_data->search_res.conn_id, p_data->search_res.is_primary);
         ESP_LOGI(GATTC_TAG, "start handle %d end handle %d current handle value %d", p_data->search_res.start_handle, p_data->search_res.end_handle, p_data->search_res.srvc_id.inst_id);
@@ -448,18 +451,18 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
             ESP_LOGI(GATTC_TAG, "ESP_GATTC_NOTIFY_EVT, receive indicate value:");
         }
         esp_log_buffer_hex(GATTC_TAG, p_data->notify.value, p_data->notify.value_len);
+        printf("\nnotify: ");
+        for(int i = 0; i < p_data->notify.value_len; i++)
+            printf("%02X ", p_data->notify.value[i]);
+        printf("\n");
         if(p_data->notify.value_len == 8 && p_data->notify.value[0] == 0x51 && p_data->notify.value[6] == 0xA5)
         {
-            if(setAllData(p_data->notify.value))
+            if(setAllForaData(p_data->notify.value))
                 getFora = true;
             else
                 printf("FORA data error\n");
             
         }
-        printf("notify: ");
-        for(int i = 0; i < p_data->notify.value_len; i++)
-            printf("%02X ", p_data->notify.value[i]);
-        printf("\n");
         break;
     case ESP_GATTC_WRITE_DESCR_EVT:
         if (p_data->write.status != ESP_GATT_OK){
@@ -673,80 +676,100 @@ uint8_t sendCmdByKeyboard( char** args, uint8_t numArgs ){
     return 0;
 }
 
-unsigned int countTick = 0;
+
+static uint16_t countTick = 0;
 static void countTime(void *pvParameters)
 {
     while(1)
     {
         countTick++;
-        if(countTick == INT32_MAX - 1)
+        if(countTick > 6000)
             countTick = 0;
-        vTaskDelay(100 / portTICK_PERIOD_MS);
+        vTaskDelay(10 / portTICK_PERIOD_MS);
     }
-    
 }
 
 unsigned int foraTime = 0;
 uint16_t nowForaNum;
-uint8_t sf( char** args, uint8_t numArgs ){ 
-    printf("\nsend FORA TH cmds.\n");
-    uint16_t index = 0; 
-    int count = 0;
-    uint8_t cmds[4][8] = {
-        {0x51, 0x2B, 0x00, 0x00, 0x00, 0x00, 0xA3, 0x1F},         //read data num
-        {0x51, 0x25, 0, 0, 0x00, 0x00, 0xA3, 0x19},  //read time[index]
-        {0x51, 0x26, 0, 0, 0x00, 0x00, 0xA3, 0x1A},  //read time[index]
-        {0x51, 0x52, 0x00, 0x00, 0x00, 0x00, 0xA3, 0x46}};        //clear all
-    
-
-    foraTime = countTick;
-    send_command(cmds[0], 8);
-    while(countTick < (foraTime + 1)); //wait 100ms
-    nowForaNum = getDataNum();
-    printf("num : %d\n", nowForaNum);
-    foraTime = countTick;
-    for(uint16_t i = 0; i < nowForaNum; i++)
+uint8_t send_fora_keyboard_cmd( char** args, uint8_t numArgs ){ 
+    printf("\nsend FORA BPG cmds.\n");
+    uint8_t myCmd[8];
+    const uint8_t userNum = getForaUserNum();
+    for(uint8_t j = 1; j <= userNum; j++)
     {
         uint8_t check;
-        cmds[1][2] = i & 0xff;
-        cmds[1][3] = i >> 8;
-        check = getCheckSum(cmds[1]);
-        cmds[1][7] = check;
+        getForaCmd(0, myCmd);
+        myCmd[2] = j;
+        check = getForaCheckSum(myCmd);
+        myCmd[7] = check;
+        waitForaData();
+        foraTime = countTick;
+        send_command(myCmd, 8);
+        while (getForaStatus() != 1 && (countTick < (foraTime + 50)));
+        if(getForaStatus() != 1)
+            printf("read data fail, status : %d\n", getForaStatus());
+        nowForaNum = getForaReadNum();
+        printf("now number : %d\n", nowForaNum);
+        if(nowForaNum > 0)
+        {
+            for(uint16_t i = 0; i < nowForaNum; i++)
+            {
+                printf("j : %d, i : %d\n", j, i);
+                uint8_t check;
+                getForaCmd(5, myCmd);
+                myCmd[2] = i & 0xff;
+                myCmd[3] = i >> 8;
+                myCmd[5] = j;
+                check = getForaCheckSum(myCmd);
+                myCmd[7] = check;
+                waitForaData();
+                foraTime = countTick;
+                send_command(myCmd, 8);
+                while (getForaStatus() != 5 && (countTick < (foraTime + 50)));
+                if(getForaStatus() != 5)
+                    printf("read MAP fail, status : %d\n", getForaStatus());
 
-        cmds[2][2] = i & 0xff;
-        cmds[2][3] = i >> 8;
-        check = getCheckSum(cmds[2]);
-        cmds[2][7] = check;
+                getForaCmd(1, myCmd);
+                myCmd[2] = i & 0xff;
+                myCmd[3] = i >> 8;
+                myCmd[5] = j;
+                check = getForaCheckSum(myCmd);
+                myCmd[7] = check;
+                waitForaData();
+                foraTime = countTick;
+                send_command(myCmd, 8);
+                while (getForaStatus() != 2 && (countTick < (foraTime + 50)));
+                if(getForaStatus() != 2)
+                    printf("read data fail, status : %d\n", getForaStatus());
 
-        send_command(cmds[1], 8);
-        send_command(cmds[2], 8);
+                getForaCmd(2, myCmd);
+                myCmd[2] = i & 0xff;
+                myCmd[3] = i >> 8;
+                myCmd[5] = j;
+                check = getForaCheckSum(myCmd);
+                myCmd[7] = check;
+                foraTime = countTick;
+                send_command(myCmd, 8);
+                while (getForaStatus() != 3 && (countTick < (foraTime + 50)));
+                if(getForaStatus() != 3)
+                    printf("read data2 fail, status : %d\n", getForaStatus());
+            }
+        }
     }
-    send_command(cmds[3], 8);
-    return 0;
-}
-
-uint8_t bp( char** args, uint8_t numArgs ){ 
-    printf("\nsend FORA BP cmds.\n");
-    uint16_t index = 0; 
-    int count = 0;
-    uint8_t cmds[4][8] = {
-        {0x51, 0x2B, 0x00, 0x00, 0x00, 0x00, 0xA3, 0x1F},         //read data num
-        {0x51, 0x25, 0, 0, 0x00, 0x00, 0xA3, 0x19},  //read time[index]
-        {0x51, 0x26, 0, 0, 0x00, 0x00, 0xA3, 0x1A},  //read time[index]
-        {0x51, 0x52, 0x00, 0x00, 0x00, 0x00, 0xA3, 0x46}};        //clear all
-    send_command(cmds[0], 8);
-
-    return 0;
+    return 1;
 }
 
 uint8_t printFora( char** args, uint8_t numArgs ){ 
-    printAllForaData();
+    if(numArgs > 1)
+        printSingleForaData(strtol(args[1], NULL, 10));
+    else
+        printAllForaData();
     return 0;
 }
 
 void app_main(void)
 {
-
+    foraInit();
     // Initialize NVS.
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
@@ -814,12 +837,9 @@ void app_main(void)
     init_cli();
     char sendCmd[] = "sc";
     cmd_register(sendCmd, sendCmdByKeyboard);
-    char foraCmd[] = "ft";
-    cmd_register(foraCmd, sf);
-    char foraPrintCmd[] = "ftp";
+    char foraCmd[] = "fo";
+    cmd_register(foraCmd, send_fora_keyboard_cmd);
+    char foraPrintCmd[] = "fp";
     cmd_register(foraPrintCmd, printFora);
-    char foraCmd2[] = "fb";
-    cmd_register(foraCmd2, bp);
-
 }
 
