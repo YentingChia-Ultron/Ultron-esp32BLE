@@ -34,7 +34,6 @@ struct foraBPGData
     uint8_t pulse;        // Unit:pul/min
     uint8_t pg;
     uint8_t arrhy;
-    uint8_t IHB2;  
     uint16_t glucose;     // Unit:mg/dL
     uint8_t gType;
     uint8_t gCode;

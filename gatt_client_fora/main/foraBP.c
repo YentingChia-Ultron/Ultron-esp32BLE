@@ -139,13 +139,7 @@ static void getIHBStr(uint8_t type, char *str)
         strcpy(str, "Normal Heart Beats");
         break;
     case 1:
-        strcpy(str, "Tachycardia(>110) or Bradycardia(<50)");
-        break;
-    case 2:
-        strcpy(str, "Varied Heart Rate ( ±20%)");
-        break;
-    case 3:
-        strcpy(str, "Atrail Fibrillation (AF)");
+        strcpy(str, "Irregular heartbeat");
         break;
     default:
         strcpy(str, "undefine type");

@@ -51,7 +51,6 @@ static void setOtherData(const uint8_t *data, const uint16_t index)
 static void setMAPData(const uint8_t *data, const uint16_t index)
 {
     myData[index].MAP = (data[3] << 8) + data[2];
-    myData[index].IHB2 = data[5];
 }
 
 uint8_t setAllForaBPGData(const uint8_t *data) //return 1 : ok, return 0 : error
@@ -136,18 +135,15 @@ uint16_t getForaBPGData(const uint8_t type, const uint16_t index)
         return myData[index].pulse;
         break;
     case 14:
-        return myData[index].IHB2;
-        break;
-    case 15:
         return myData[index].glucose;
         break;
-    case 16:
+    case 15:
         return myData[index].gType;
         break;
-    case 17:
+    case 16:
         return myData[index].gCode;
         break;
-    case 18:
+    case 17:
         return myData[index].ambientTemp;
         break;
     default:
@@ -226,8 +222,6 @@ uint8_t printAllForaBPGData()
                 printf("arrhy : normal heart beats\n");
             getIHBStr(myData[i].IHB, tmpStr);
             printf("IHB : %s\n", tmpStr);
-            getIHBStr(myData[i].IHB2, tmpStr);
-            printf("IHB2 : %s\n", tmpStr);
             printf("systolic : %d mmHG \n", myData[i].systolic);
             printf("diastolic : %d mmHG\n", myData[i].diastolic);
             printf("MAP : %d mmHG\n", myData[i].MAP);
@@ -274,8 +268,6 @@ uint8_t printSingleForaBPGData(const uint16_t index)
             printf("arrhy : normal heart beats\n");
         getIHBStr(myData[index - 1].IHB, tmpStr);
         printf("IHB : %s\n", tmpStr);
-        getIHBStr(myData[index - 1].IHB2, tmpStr);
-        printf("IHB2 : %s\n", tmpStr);
         printf("systolic : %d mmHG \n", myData[index - 1].systolic);
         printf("diastolic : %d mmHG\n", myData[index - 1].diastolic);
         printf("MAP : %d mmHG\n", myData[index - 1].MAP);
