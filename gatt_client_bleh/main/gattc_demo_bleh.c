@@ -44,8 +44,11 @@ uint8_t is_send[2] = {0};
 void test(void *arg)
 {
     init_BLE();
-    set_ble_bda(1, bda[1]);
-    set_ble_bda(0, bda[0]);
+    for(uint8_t i = 0; i < 2; i++)
+    {
+        set_ble_bda(i, bda[i]);
+        init_profile(i, myUUID[i]);
+    }
     start_scan(-1);
     while (1)
     {
@@ -57,9 +60,8 @@ void test(void *arg)
             uint8_t status = get_ble_status(i);
             if(status == 1)
             {
-                init_profile(i, myUUID[i]);
                 open_profile(i);
-                vTaskDelay(150);
+                vTaskDelay(pdMS_TO_TICKS(100));
             }
             if(!is_send[i] && status == 2)
             {
@@ -69,26 +71,26 @@ void test(void *arg)
             }
             if(is_send[i] > 0)
                 is_send[i] = (is_send[i] >= 2)? 0 : is_send[i] + 1;
-            if(get_data_status())
+            if(get_data_status(i))
             {
+                printf("notify[%d] : ", i);
                 is_send[i] = 0;
                 uint8_t rec[32];
-                uint8_t len = get_notify_len();
+                uint8_t len = get_notify_len(i);
                 if(len > 32)
                     printf("over size\n");
                 else
                 {
-                    get_notify_vlaue(rec);
+                    get_notify_vlaue(i, rec);
                     for(int i = 0; i < len; i++)
                     {
                         printf("%02X ", rec[i]);
                     }
-                    printf("\n");
+                    printf("\n\n");
                 }
             }
         }
-        
-        vTaskDelay(pdMS_TO_TICKS(100));
+        vTaskDelay(pdMS_TO_TICKS(1000));
     }
 }
 

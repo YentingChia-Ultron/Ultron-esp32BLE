@@ -28,15 +28,15 @@
 
 
 static uint8_t remote_device_bda[2][6];
-static uint8_t adv_data[64];
-static uint8_t adv_data_len = 0;
-static int ble_rssi = 0;
+static uint8_t adv_data[MAX_PROFILE_NUM][64];
+static uint8_t adv_data_len[MAX_PROFILE_NUM] = {0};
+static int ble_rssi[MAX_PROFILE_NUM] = {0};
 
 static uint8_t ble_status[MAX_PROFILE_NUM] = {0}; //1 : find, 2 : connect
 static bool get_server[MAX_PROFILE_NUM] = {0};
-static bool get_data   = false;
-uint8_t notify_vlaue[32];
-uint8_t notify_len = 0;
+static bool get_data[MAX_PROFILE_NUM]   = {0};
+uint8_t notify_vlaue[MAX_PROFILE_NUM][32];
+uint8_t notify_len[MAX_PROFILE_NUM] = {0};
 bool scan_forever = false;
 static esp_gattc_char_elem_t *char_elem_result   = NULL;
 static esp_gattc_descr_elem_t *descr_elem_result = NULL;
@@ -84,7 +84,7 @@ static struct gattc_profile_inst gl_profile_tab[MAX_PROFILE_NUM];
 
 
 void send_command(uint8_t app_id, const uint8_t *cmd, int len) {
-    get_data = false;
+    get_data[app_id] = false;
     printf("\nsend cmd : ");
     for(int i = 0 ; i < len ; i++) {
         printf("%02X ", cmd[i]);
@@ -346,10 +346,16 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
     }
     case ESP_GATTC_NOTIFY_EVT:
         ESP_LOGE(GATTC_TAG, "ESP_GATTC_NOTIFY_EVT");
+        app_id = 0;
+        for (;app_id < MAX_PROFILE_NUM; app_id++)
+        {
+            if(gl_profile_tab[app_id].gattc_if == gattc_if)
+                break;
+        }
         esp_log_buffer_hex(GATTC_TAG, p_data->notify.value, p_data->notify.value_len);
-        notify_len = p_data->notify.value_len;
-        memcpy(notify_vlaue, p_data->notify.value, notify_len);
-        get_data = true;
+        notify_len[app_id] = p_data->notify.value_len;
+        memcpy(notify_vlaue[app_id], p_data->notify.value, notify_len[app_id]);
+        get_data[app_id] = true;
         break;
     case ESP_GATTC_WRITE_DESCR_EVT:
         app_id = 0;
@@ -437,10 +443,16 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
 {
     uint8_t *adv_name = NULL;
     uint8_t adv_name_len = 0;
+    uint8_t app_id = 0;
     switch (event) {
     case ESP_GAP_BLE_READ_RSSI_COMPLETE_EVT:
+        for(;app_id < MAX_PROFILE_NUM; app_id++)
+        {
+            if(memcmp(param->read_rssi_cmpl.remote_addr, remote_device_bda[app_id], 6) == 0)
+                break;
+        }
         printf("ESP_GAP_BLE_READ_RSSI_COMPLETE_EVT : %d\n", param->read_rssi_cmpl.rssi);
-        ble_rssi = param->read_rssi_cmpl.rssi;
+        ble_rssi[app_id] = param->read_rssi_cmpl.rssi;
         break;
     case ESP_GAP_BLE_SCAN_PARAM_SET_COMPLETE_EVT: {
         break;
@@ -475,18 +487,18 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
                 esp_log_buffer_hex(GATTC_TAG, &scan_result->scan_rst.ble_adv[scan_result->scan_rst.adv_data_len], scan_result->scan_rst.scan_rsp_len);
             }
 #endif
-            uint8_t app_id = 0;
+            app_id = 0;
             for(;app_id < MAX_PROFILE_NUM; app_id++)
             {
                 if(ble_status[app_id] == 2)
                     continue;
                 if (memcmp(scan_result->scan_rst.bda, remote_device_bda[app_id], 6) == 0)
                 {
-                    ble_rssi = scan_result->scan_rst.rssi;
-                    adv_data_len = scan_result->scan_rst.adv_data_len + scan_result->scan_rst.scan_rsp_len;
-                    if(adv_data_len > 64)
-                        ESP_LOGE(GATTC_TAG, "adv_data_len over 64 : %d", adv_data_len);
-                    memcpy(adv_data, scan_result->scan_rst.ble_adv, adv_data_len);
+                    ble_rssi[app_id] = scan_result->scan_rst.rssi;
+                    adv_data_len[app_id] = scan_result->scan_rst.adv_data_len + scan_result->scan_rst.scan_rsp_len;
+                    if(adv_data_len[app_id] > 64)
+                        ESP_LOGE(GATTC_TAG, "adv_data_len over 64 : %d", adv_data_len[app_id]);
+                    memcpy(adv_data[app_id], scan_result->scan_rst.ble_adv, adv_data_len[app_id]);
                     // ESP_LOGI(GATTC_TAG, "searched device %s\n", adv_name);
                     // ESP_LOGE(GATTC_TAG, "scan adv data:");
                     // esp_log_buffer_hex(GATTC_TAG, adv_data, adv_data_len);
@@ -584,30 +596,30 @@ uint8_t get_ble_status(uint8_t app_id)
 {
     return ble_status[app_id];
 }
-uint8_t get_adv_data_len()
+uint8_t get_adv_data_len(uint8_t app_id)
 {
-    return adv_data_len;
+    return adv_data_len[app_id];
 }
 
 int get_rssi(uint8_t app_id)
 {
     if(ble_status[app_id] == 2)
     {
-        int last_value = ble_rssi;
+        int last_value = ble_rssi[app_id];
         uint8_t i = 0;
         esp_ble_gap_read_rssi(remote_device_bda[app_id]);
-        while(last_value == ble_rssi && i < 20)
+        while(last_value == ble_rssi[app_id] && i < 20)
         {
             i++;
             vTaskDelay(10 / portTICK_RATE_MS);
         }
     }
-    return ble_rssi;
+    return ble_rssi[app_id];
 }
 
-void get_adv_data(uint8_t *buff)
+void get_adv_data(uint8_t app_id, uint8_t *buff)
 {
-    memcpy(buff, adv_data, adv_data_len);
+    memcpy(buff, adv_data[app_id], adv_data_len[app_id]);
 }
 
 void disconnect_BLE(uint8_t app_id) {
@@ -617,18 +629,18 @@ void disconnect_BLE(uint8_t app_id) {
     }
 }
 
-bool get_data_status() {
-    return get_data;
+bool get_data_status(uint8_t app_id) {
+    return get_data[app_id];
 }
 
-uint8_t get_notify_len() 
+uint8_t get_notify_len(uint8_t app_id) 
 {
-    return notify_len;
+    return notify_len[app_id];
 }
 
-void get_notify_vlaue(uint8_t *target) {
-    memcpy(target, notify_vlaue, notify_len);
-    get_data = false;
+void get_notify_vlaue(uint8_t app_id, uint8_t *target) {
+    memcpy(target, notify_vlaue[app_id], notify_len[app_id]);
+    get_data[app_id] = false;
 }
 
 void set_ble_bda(uint8_t app_id, uint8_t *bda)
