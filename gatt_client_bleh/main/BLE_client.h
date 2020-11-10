@@ -6,22 +6,27 @@
 
 struct uuids
 {
-    uint8_t service_uuid_type;   //0 : 16, 1 : 32, 2 : 128
-    uint8_t service_uuid[ESP_UUID_LEN_128];
-    uint8_t char_uuid_type;
-    uint8_t char_uuid[ESP_UUID_LEN_128];
+    esp_bt_uuid_t service_uuid;
+    esp_bt_uuid_t char_uuid;
 };
 
 typedef struct uuids uuid_t;
 
-void send_command(const uint8_t *cmd, int len);
-void init_BLE(char *name, uint8_t *bda,  uuid_t myUUIDs);
-void start_scan();
+void send_command(uint8_t app_id, const uint8_t *cmd, int len);
+void init_BLE();
+void start_scan(int duration);
 void stop_scan();
-void disconnect_BLE();
-bool get_ble_status();
+void disconnect_BLE(uint8_t app_id);
+void request_read(uint8_t app_id);
+void init_profile(uint8_t app_id, uuid_t myUUIDs);
+void open_profile(uint8_t app_id);
+uint8_t get_ble_status(uint8_t app_id);
 bool get_data_status();
 uint8_t get_notify_len();
 void get_notify_vlaue(uint8_t *target);
+uint8_t get_adv_data_len();
+void get_adv_data(uint8_t *buff);
+int get_rssi(uint8_t app_id);
+void set_ble_bda(uint8_t app_id, uint8_t *bda);
 
 #endif /* BLE_CLIENT_H_ */
