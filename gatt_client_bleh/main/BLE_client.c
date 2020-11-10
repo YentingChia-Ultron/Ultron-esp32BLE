@@ -22,7 +22,7 @@
 #define GATTC_TAG "GATTC_DEMO_BLEH"
 #define REMOTE_SERVICE_UUID        {0x23, 0xD1, 0xBC, 0xEA, 0x5F, 0x78, 0x23, 0x15, 0xDE, 0xEF, 0x12, 0x12, 0x23, 0x15, 0, 0}
 #define REMOTE_NOTIFY_CHAR_UUID    {0x23, 0xD1, 0xBC, 0xEA, 0x5F, 0x78, 0x23, 0x15, 0xDE, 0xEF, 0x12, 0x12, 0x24, 0x15, 0, 0}
-#define MAX_PROFILE_NUM      2
+#define MAX_PROFILE_NUM      CONFIG_BTDM_CTRL_BLE_MAX_CONN
 #define PROFILE_A_APP_ID 0
 #define INVALID_HANDLE   0
 
@@ -133,6 +133,7 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
             if(gl_profile_tab[app_id].gattc_if == gattc_if)
                 break;
         }
+        memcpy(gl_profile_tab[app_id].remote_bda, p_data->open.remote_bda, 6);
         gl_profile_tab[app_id].conn_id = p_data->open.conn_id;
         esp_err_t mtu_ret = esp_ble_gattc_send_mtu_req (gattc_if, p_data->open.conn_id);
         if (mtu_ret){
@@ -703,19 +704,20 @@ void init_BLE()
     if (local_mtu_ret){
         ESP_LOGE(GATTC_TAG, "set local  MTU failed, error code = %x", local_mtu_ret);
     }
+    for(int i = 0; i < MAX_PROFILE_NUM; i++)
+    {
+        gl_profile_tab[i].gattc_cb = gattc_profile_event_handler;
+        gl_profile_tab[i].gattc_if = ESP_GATT_IF_NONE;
+        gl_profile_tab[i].app_id = i;
+        esp_err_t ret = esp_ble_gattc_app_register(i);
+        if (ret)
+            ESP_LOGE(GATTC_TAG, "%s gattc app register failed, error code = %x\n", __func__, ret);
+    }
 }
 
-void init_profile(uint8_t app_id, uuid_t myUUIDs)
+void init_uuid(uint8_t app_id, uuid_t myUUIDs)
 {
-    printf("init_profile\n");
-    gl_profile_tab[app_id].gattc_cb = gattc_profile_event_handler;
-    gl_profile_tab[app_id].gattc_if = ESP_GATT_IF_NONE;
-    gl_profile_tab[app_id].app_id = app_id;
-    memcpy(gl_profile_tab[app_id].remote_bda, remote_device_bda[app_id], 6);
-    esp_err_t ret = esp_ble_gattc_app_register(app_id);
-    if (ret){
-        ESP_LOGE(GATTC_TAG, "%s gattc app register failed, error code = %x\n", __func__, ret);
-    }
+    printf("init_uuid\n");
     if(myUUIDs.service_uuid.len == ESP_UUID_LEN_16)
     {
         remote_filter_service_uuid[app_id].len = ESP_UUID_LEN_16;
