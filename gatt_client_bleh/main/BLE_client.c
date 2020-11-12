@@ -18,7 +18,6 @@
 
 
 #define GATTC_TAG "GATTC_DEMO_BLEH"
-#define PROFILE_A_APP_ID 0
 #define INVALID_HANDLE   0
 
 static esp_gattc_char_elem_t *char_elem_result   = NULL;
@@ -47,9 +46,51 @@ static esp_ble_scan_params_t ble_scan_params = {
 
 
 
-void addProfile(BleProfileT profile)
+void addProfile(UuidsT *myUUIDs, uint8_t service_num, uint8_t *bda)
 {
-	ProfileNodeT *new_node = (ProfileNodeT*)malloc(sizeof(ProfileNodeT));
+    BleProfileT profile;
+    if(service_num > MAX_SERVICE_NUM)
+    {
+        ESP_LOGE(GATTC_TAG, "service_num > MAX_SERVICE_NUM");
+        profile.service_num = 0;
+        return;
+    }
+    profile.service_num = service_num;
+    profile.services = calloc(service_num, sizeof(BleServiceT));
+    if(profile.services == NULL)
+    {
+        ESP_LOGE(GATTC_TAG, "services calloc fail");
+        return;
+    }
+    for(uint8_t i = 0; i < service_num; i++)
+    {
+        profile.services[i].service_uuid = myUUIDs[i].service_uuid;
+        if(myUUIDs[i].char_num > MAX_CHAR_NUM)
+        {
+            ESP_LOGE(GATTC_TAG, "char_num[%d] > MAX_CHAR_NUM", i);
+            profile.services[i].char_num = 0;
+            continue;
+        }
+        profile.services[i].char_num = myUUIDs[i].char_num;
+        profile.services[i].chars = calloc(myUUIDs[i].char_num, sizeof(BleCharT));
+        if(profile.services[i].chars == NULL)
+        {
+            ESP_LOGE(GATTC_TAG, "chars calloc fail");
+            return;
+        }
+        for(uint8_t j = 0; j < myUUIDs[i].char_num; j++)
+            profile.services[i].chars[j].char_uuid = myUUIDs[i].char_uuid[j];
+    }
+    profile.gattc_cb = gattc_profile_event_handler;
+    profile.gattc_if = ESP_GATT_IF_NONE;
+    memcpy(profile.remote_bda, bda, 6);
+
+	ProfileNodeT *new_node = (ProfileNodeT*)calloc(1, sizeof(ProfileNodeT));
+    if(new_node == NULL)
+    {
+        ESP_LOGE(GATTC_TAG, "new_node calloc fail");
+            return;
+    }
 	new_node->profile = profile;
 	new_node->next = NULL;
 	
@@ -67,43 +108,84 @@ void addProfile(BleProfileT profile)
 		}
         new_node->profile_id = id;
 		current->next = new_node;
-		return;
 	}
+    esp_err_t ret = esp_ble_gattc_app_register(new_node->profile_id);
+    if (ret)
+        ESP_LOGE(GATTC_TAG, "%s gattc app register failed, error code = %x\n", __func__, ret);
 }
-void insertProfile(uint8_t profile_id, BleProfileT profile)
-{
-	ProfileNodeT *current = head_profile; 
-    if(current == NULL){
-        return;
-    }
-	ProfileNodeT *new_node = (ProfileNodeT*)malloc(sizeof(ProfileNodeT));	
-    new_node->profile_id = profile_id;		
-    new_node->profile = profile;
-	if(profile_id == 0)
-    {
-        new_node->next = current;
-        current = new_node->next;
-		head_profile = new_node;
-    }
-    else
-    {
-        while(current->next != NULL) 
-        {
-            if(profile_id == current->next->profile_id) {
-                new_node->next = current->next;
-                current->next = new_node;
-                break;
-            }
-            current = current->next;
-        }
-    }
-	current = new_node->next;
-    while(current != NULL)
-    {
-        current->profile_id++;
-        current = current->next;
-    }
-}
+// void insertProfile(uint8_t profile_id, UuidsT *myUUIDs, uint8_t service_num)
+// {
+//     BleProfileT profile;
+//     if(service_num > MAX_SERVICE_NUM)
+//     {
+//         ESP_LOGE(GATTC_TAG, "service_num > MAX_SERVICE_NUM");
+//         profile.service_num = 0;
+//         return;
+//     }
+//     profile.service_num = service_num;
+//     profile.services = calloc(service_num, sizeof(BleServiceT));
+//     if(profile.services == NULL)
+//     {
+//         ESP_LOGE(GATTC_TAG, "services calloc fail");
+//         return;
+//     }
+//     for(uint8_t i = 0; i < service_num; i++)
+//     {
+//         profile.services[i].service_uuid = myUUIDs[i].service_uuid;
+//         if(myUUIDs[i].char_num > MAX_CHAR_NUM)
+//         {
+//             ESP_LOGE(GATTC_TAG, "char_num[%d] > MAX_CHAR_NUM", i);
+//             profile.services[i].char_num = 0;
+//             continue;
+//         }
+//         profile.services[i].char_num = myUUIDs[i].char_num;
+//         profile.services[i].chars = calloc(myUUIDs[i].char_num, sizeof(BleCharT));
+//         if(profile.services[i].chars == NULL)
+//         {
+//             ESP_LOGE(GATTC_TAG, "chars calloc fail");
+//             return;
+//         }
+//         for(uint8_t j = 0; j < myUUIDs[i].char_num; j++)
+//             profile.services[i].chars[j].char_uuid = myUUIDs[i].char_uuid[j];
+//     }
+    
+// 	ProfileNodeT *current = head_profile; 
+//     if(current == NULL){
+//         return;
+//     }
+// 	ProfileNodeT *new_node = (ProfileNodeT*)calloc(1, sizeof(ProfileNodeT));
+//     if(new_node == NULL)
+//     {
+//         ESP_LOGE(GATTC_TAG, "new_node calloc fail");
+//             return;
+//     }
+//     new_node->profile_id = profile_id;		
+//     new_node->profile = profile;
+// 	if(profile_id == 0)
+//     {
+//         new_node->next = current;
+//         current = new_node->next;
+// 		head_profile = new_node;
+//     }
+//     else
+//     {
+//         while(current->next != NULL) 
+//         {
+//             if(profile_id == current->next->profile_id) {
+//                 new_node->next = current->next;
+//                 current->next = new_node;
+//                 break;
+//             }
+//             current = current->next;
+//         }
+//     }
+// 	current = new_node->next;
+//     while(current != NULL)
+//     {
+//         current->profile_id++;
+//         current = current->next;
+//     }
+// }
 
 
 void deleteProfile(uint8_t profile_id)
@@ -134,12 +216,19 @@ void deleteProfile(uint8_t profile_id)
     }
     if(temp != NULL)
     {
-        for(uint8_t i = 0; i < temp->profile.service_num; i++)
+        esp_ble_gattc_app_unregister(temp->profile.gattc_if);
+        for(uint8_t i = 0; i < temp->profile.service_num; i++){
             free(temp->profile.services[i].chars);
+            temp->profile.services[i].chars = NULL;
+        }
         free(temp->profile.services);
+        temp->profile.services = NULL;
         free(temp);
+        temp = NULL;
+        printf("delete sucess\n");
     }
 }
+
 ProfileNodeT *findProfile(uint8_t profile_id)
 {
 	ProfileNodeT *new_node = head_profile;
@@ -153,30 +242,38 @@ ProfileNodeT *findProfile(uint8_t profile_id)
     return NULL;
 }
 
-
-
-BleProfileT ble_profiles[MAX_PROFILE_NUM] = {};  //struct initialize to zero
-
-void sendCommand(uint8_t app_id, uint8_t s_id, uint8_t ch_id, const uint8_t *cmd, int len) {
-    ble_profiles[app_id].services[s_id].chars[ch_id].have_data = false;
+void sendCommand(uint8_t profile_id, uint8_t s_id, uint8_t ch_id, const uint8_t *cmd, int len) {
+    ProfileNodeT *temp = findProfile(profile_id);
+    if(temp == NULL)
+    {
+        ESP_LOGE(GATTC_TAG, "profile_id error");
+        return;
+    }
+    temp->profile.services[s_id].chars[ch_id].have_data = false;
     printf("\nsend cmd : ");
     for(int i = 0 ; i < len ; i++) {
         printf("%02X ", cmd[i]);
     }
     printf("\n");
-    esp_ble_gattc_write_char( ble_profiles[app_id].gattc_if,
-                              ble_profiles[app_id].conn_id,
-                              ble_profiles[app_id].services[s_id].chars[ch_id].char_handle,
+    esp_ble_gattc_write_char( temp->profile.gattc_if,
+                              temp->profile.conn_id,
+                              temp->profile.services[s_id].chars[ch_id].char_handle,
                               len,
                               cmd,
                               ESP_GATT_WRITE_TYPE_RSP,
                               ESP_GATT_AUTH_REQ_NONE);
 }
 
-void requestRead(uint8_t app_id, uint8_t s_id, uint8_t ch_id) {
-    esp_ble_gattc_read_char( ble_profiles[app_id].gattc_if,
-                              ble_profiles[app_id].conn_id,
-                              ble_profiles[app_id].services[s_id].chars[ch_id].char_handle,
+void requestRead(uint8_t profile_id, uint8_t s_id, uint8_t ch_id) {
+    ProfileNodeT *temp = findProfile(profile_id);
+    if(temp == NULL)
+    {
+        ESP_LOGE(GATTC_TAG, "profile_id error");
+        return;
+    }
+    esp_ble_gattc_read_char( temp->profile.gattc_if,
+                              temp->profile.conn_id,
+                              temp->profile.services[s_id].chars[ch_id].char_handle,
                               ESP_GATT_AUTH_REQ_NONE);
 }
 
@@ -200,14 +297,16 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
         }
         ESP_LOGI(GATTC_TAG, "open success");
         ESP_LOGI(GATTC_TAG, "ESP_GATTC_OPEN_EVT conn_id %d, if %d", p_data->open.conn_id, gattc_if);
-        uint8_t app_id = 0;
-        for (;app_id < MAX_PROFILE_NUM; app_id++)
+        ProfileNodeT *temp = head_profile;
+        while(temp != NULL)
         {
-            if(ble_profiles[app_id].gattc_if == gattc_if)
+            if(temp->profile.gattc_if == gattc_if)
                 break;
+            temp = temp->next;
         }
-        memcpy(ble_profiles[app_id].remote_bda, p_data->open.remote_bda, 6);
-        ble_profiles[app_id].conn_id = p_data->open.conn_id;
+        memcpy(temp->profile.remote_bda, p_data->open.remote_bda, 6);
+        temp->profile.conn_id = p_data->open.conn_id;
+
         esp_err_t mtu_ret = esp_ble_gattc_send_mtu_req (gattc_if, p_data->open.conn_id);
         if (mtu_ret){
             ESP_LOGE(GATTC_TAG, "config MTU error, error code = %x", mtu_ret);
@@ -223,75 +322,35 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
         esp_ble_gattc_search_service(gattc_if, param->cfg_mtu.conn_id, NULL);
         break;
     case ESP_GATTC_SEARCH_RES_EVT: {
-
-
-        // printf("\n--------------------------\n");
-        // printf("\nsearch_res: ");
-        // printf("%X", p_data->search_res.srvc_id.uuid.uuid.uuid16);
-        // printf("\n...\n");
-        // for(int i =0 ; i<ESP_UUID_LEN_128;i++)
-        // printf("%X ",p_data->search_res.srvc_id.uuid.uuid.uuid128[i]);
-        // printf("\n");
-        // uint16_t mycount = 0;
-        // esp_gattc_char_elem_t *myresult = NULL;
-        // esp_ble_gattc_get_attr_count( gattc_if,
-        //                               p_data->search_res.conn_id,
-        //                               ESP_GATT_DB_ALL,
-        //                               p_data->search_res.start_handle,
-        //                               p_data->search_res.end_handle,
-        //                               INVALID_HANDLE,
-        //                               &mycount);
-        // printf("count : %d\n",mycount);
-        // myresult = (esp_gattc_char_elem_t *)malloc(sizeof(esp_gattc_char_elem_t) * mycount);
-        // esp_gatt_status_t status = esp_ble_gattc_get_all_char( gattc_if,
-        //                             p_data->search_res.conn_id,
-        //                             p_data->search_res.start_handle,
-        //                             p_data->search_res.end_handle,
-        //                             myresult,
-        //                             &mycount, 0);
-        // if (status != ESP_GATT_OK){
-        //         printf("esp_ble_gattc_get_all_char error %2X\n",status);
-        //     }
-        //     else{
-        //         for(int i = 0; i < mycount; i++){
-        //         printf("CHAR[%d] UUID : %2X\n", i, myresult[i].uuid.uuid.uuid16);
-        //         printf("\n.....\n");
-        //             for(int j =0 ; j<ESP_UUID_LEN_128;j++)
-        //                 printf("%X ",myresult[i].uuid.uuid.uuid128[j]);
-        //         }
-        //         printf("\n");
-        //     }
-        // free(myresult);
-        // printf("\n--------------------------\n");
-
         ESP_LOGI(GATTC_TAG, "SEARCH RES: conn_id = %x is primary service %d", p_data->search_res.conn_id, p_data->search_res.is_primary);
         ESP_LOGI(GATTC_TAG, "start handle %d end handle %d current handle value %d", p_data->search_res.start_handle, p_data->search_res.end_handle, p_data->search_res.srvc_id.inst_id);
-        uint8_t app_id = 0;
-        for (;app_id < MAX_PROFILE_NUM; app_id++)
+        ProfileNodeT *temp = head_profile;
+        while(temp != NULL)
         {
-            if(ble_profiles[app_id].gattc_if == gattc_if)
+            if(temp->profile.gattc_if == gattc_if)
                 break;
+            temp = temp->next;
         }
-        for(uint8_t i = 0; i < ble_profiles[app_id].service_num; i++)
+        for(uint8_t i = 0; i < temp->profile.service_num; i++)
         {
             bool get_server = false;
-            if (ble_profiles[app_id].services[i].service_uuid.len == ESP_UUID_LEN_16 && p_data->search_res.srvc_id.uuid.uuid.uuid16 == ble_profiles[app_id].services[i].service_uuid.uuid.uuid16)
+            if (temp->profile.services[i].service_uuid.len == ESP_UUID_LEN_16 && p_data->search_res.srvc_id.uuid.uuid.uuid16 == temp->profile.services[i].service_uuid.uuid.uuid16)
                 get_server = true;
-            if (ble_profiles[app_id].services[i].service_uuid.len == ESP_UUID_LEN_32 && p_data->search_res.srvc_id.uuid.uuid.uuid32 == ble_profiles[app_id].services[i].service_uuid.uuid.uuid32)
+            if (temp->profile.services[i].service_uuid.len == ESP_UUID_LEN_32 && p_data->search_res.srvc_id.uuid.uuid.uuid32 == temp->profile.services[i].service_uuid.uuid.uuid32)
                 get_server = true;
-            else if (ble_profiles[app_id].services[i].service_uuid.len == ESP_UUID_LEN_128 && memcmp(p_data->search_res.srvc_id.uuid.uuid.uuid128, ble_profiles[app_id].services[i].service_uuid.uuid.uuid128, ESP_UUID_LEN_128) == 0)
+            else if (temp->profile.services[i].service_uuid.len == ESP_UUID_LEN_128 && memcmp(p_data->search_res.srvc_id.uuid.uuid.uuid128, temp->profile.services[i].service_uuid.uuid.uuid128, ESP_UUID_LEN_128) == 0)
                 get_server = true;
             if (get_server) 
             {
                 ESP_LOGI(GATTC_TAG, "service found");
-                ble_profiles[app_id].services[i].service_start_handle = p_data->search_res.start_handle;
-                ble_profiles[app_id].services[i].service_end_handle = p_data->search_res.end_handle;
-                if(ble_profiles[app_id].services[i].service_uuid.len == ESP_UUID_LEN_16)
+                temp->profile.services[i].service_start_handle = p_data->search_res.start_handle;
+                temp->profile.services[i].service_end_handle = p_data->search_res.end_handle;
+                if(temp->profile.services[i].service_uuid.len == ESP_UUID_LEN_16)
                     ESP_LOGI(GATTC_TAG, "UUID16: %04X", p_data->search_res.srvc_id.uuid.uuid.uuid16);
-                else if(ble_profiles[app_id].services[i].service_uuid.len == ESP_UUID_LEN_32)
+                else if(temp->profile.services[i].service_uuid.len == ESP_UUID_LEN_32)
                     ESP_LOGI(GATTC_TAG, "UUID32: %04X", p_data->search_res.srvc_id.uuid.uuid.uuid32);
                 else
-                    esp_log_buffer_hex(GATTC_TAG, p_data->search_res.srvc_id.uuid.uuid.uuid128, ble_profiles[app_id].services[i].service_uuid.len);
+                    esp_log_buffer_hex(GATTC_TAG, p_data->search_res.srvc_id.uuid.uuid.uuid128, temp->profile.services[i].service_uuid.len);
 
                 //find char
                 for(uint8_t j = 0; j < MAX_CHAR_NUM; j++)
@@ -300,8 +359,8 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
                     esp_gatt_status_t status = esp_ble_gattc_get_attr_count( gattc_if,
                                                                             p_data->search_res.conn_id,
                                                                             ESP_GATT_DB_CHARACTERISTIC,
-                                                                            ble_profiles[app_id].services[i].service_start_handle,
-                                                                            ble_profiles[app_id].services[i].service_end_handle,
+                                                                            temp->profile.services[i].service_start_handle,
+                                                                            temp->profile.services[i].service_end_handle,
                                                                             INVALID_HANDLE,
                                                                             &count);
                     if (status != ESP_GATT_OK)
@@ -314,9 +373,9 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
                         {
                             status = esp_ble_gattc_get_char_by_uuid( gattc_if,
                                                                     p_data->search_res.conn_id,
-                                                                    ble_profiles[app_id].services[i].service_start_handle,
-                                                                    ble_profiles[app_id].services[i].service_end_handle,
-                                                                    ble_profiles[app_id].services[i].chars[j].char_uuid,
+                                                                    temp->profile.services[i].service_start_handle,
+                                                                    temp->profile.services[i].service_end_handle,
+                                                                    temp->profile.services[i].chars[j].char_uuid,
                                                                     char_elem_result,
                                                                     &count);
                             if (status != ESP_GATT_OK)
@@ -324,12 +383,13 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
                             ESP_LOGI(GATTC_TAG, "char_elem_result count = %d   ", count);
                             /*  Every service have only one char in our 'ESP_GATTS_DEMO' demo, so we used first 'char_elem_result' */
                             if (count > 0 && (char_elem_result[0].properties & ESP_GATT_CHAR_PROP_BIT_NOTIFY)){
-                                ble_profiles[app_id].services[i].chars[j].char_handle = char_elem_result[0].char_handle;
-                                esp_ble_gattc_register_for_notify(gattc_if, ble_profiles[app_id].remote_bda, char_elem_result[0].char_handle);
+                                temp->profile.services[i].chars[j].char_handle = char_elem_result[0].char_handle;
+                                esp_ble_gattc_register_for_notify(gattc_if, temp->profile.remote_bda, char_elem_result[0].char_handle);
                             }
                         }
                         /* free char_elem_result */
                         free(char_elem_result);
+                        char_elem_result = NULL;
                     }
                     else
                         ESP_LOGE(GATTC_TAG, "no char found");
@@ -354,11 +414,12 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
          break;
     case ESP_GATTC_REG_FOR_NOTIFY_EVT: {
         ESP_LOGI(GATTC_TAG, "ESP_GATTC_REG_FOR_NOTIFY_EVT");
-        uint8_t app_id = 0;
-        for (;app_id < MAX_PROFILE_NUM; app_id++)
+        ProfileNodeT *temp = head_profile;
+        while(temp != NULL)
         {
-            if(ble_profiles[app_id].gattc_if == gattc_if)
+            if(temp->profile.gattc_if == gattc_if)
                 break;
+            temp = temp->next;
         }
         if (p_data->reg_for_notify.status != ESP_GATT_OK){
             ESP_LOGE(GATTC_TAG, "REG FOR NOTIFY failed: error status = %d", p_data->reg_for_notify.status);
@@ -370,7 +431,7 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
                 ESP_LOGE(GATTC_TAG, "malloc error, gattc no mem");
             }else{
                 esp_gatt_status_t ret_status = esp_ble_gattc_get_descr_by_char_handle( gattc_if,
-                                                                     ble_profiles[app_id].conn_id,
+                                                                     temp->profile.conn_id,
                                                                      p_data->reg_for_notify.handle,
                                                                      notify_descr_uuid,
                                                                      descr_elem_result,
@@ -381,7 +442,7 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
                 /* Every char has only one descriptor in our 'ESP_GATTS_DEMO' demo, so we used first 'descr_elem_result' */
                 if (count > 0 && descr_elem_result[0].uuid.len == ESP_UUID_LEN_16 && descr_elem_result[0].uuid.uuid.uuid16 == ESP_GATT_UUID_CHAR_CLIENT_CONFIG){
                     ret_status = esp_ble_gattc_write_char_descr( gattc_if,
-                                                                 ble_profiles[app_id].conn_id,
+                                                                 temp->profile.conn_id,
                                                                  descr_elem_result[0].handle,
                                                                  sizeof(notify_en),
                                                                  (uint8_t *)&notify_en,
@@ -393,6 +454,7 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
                 }
                 /* free descr_elem_result */
                 free(descr_elem_result);
+                descr_elem_result = NULL;
             }
         }
         break;
@@ -400,22 +462,23 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
     case ESP_GATTC_NOTIFY_EVT:
         ESP_LOGE(GATTC_TAG, "ESP_GATTC_NOTIFY_EVT");
         esp_log_buffer_hex(GATTC_TAG, p_data->notify.value, p_data->notify.value_len);
-        app_id = 0;
-        for (;app_id < MAX_PROFILE_NUM; app_id++)
+        temp = head_profile;
+        while(temp != NULL)
         {
-            if(ble_profiles[app_id].gattc_if == gattc_if)
+            if(temp->profile.gattc_if == gattc_if)
                 break;
+            temp = temp->next;
         }
         bool find = false;
-        for(int i = 0; i < ble_profiles[app_id].service_num; i++)
+        for(int i = 0; i < temp->profile.service_num; i++)
         {
             for(int j = 0; j < MAX_CHAR_NUM; j++)
             {
-                if(p_data->notify.handle == ble_profiles[app_id].services[i].chars[j].char_handle)
+                if(p_data->notify.handle == temp->profile.services[i].chars[j].char_handle)
                 {
-                    ble_profiles[app_id].services[i].chars[j].notify_len = p_data->notify.value_len;
-                    memcpy(ble_profiles[app_id].services[i].chars[j].notify_value, p_data->notify.value, ble_profiles[app_id].services[i].chars[j].notify_len);
-                    ble_profiles[app_id].services[i].chars[j].have_data = true;
+                    temp->profile.services[i].chars[j].notify_len = p_data->notify.value_len;
+                    memcpy(temp->profile.services[i].chars[j].notify_value, p_data->notify.value, temp->profile.services[i].chars[j].notify_len);
+                    temp->profile.services[i].chars[j].have_data = true;
                 }
             }
             if(find)
@@ -423,14 +486,15 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
         }
         break;
     case ESP_GATTC_WRITE_DESCR_EVT:
-        app_id = 0;
-        for (;app_id < MAX_PROFILE_NUM; app_id++)
+        temp = head_profile;
+        while(temp != NULL)
         {
-            if(ble_profiles[app_id].gattc_if == gattc_if)
+            if(temp->profile.gattc_if == gattc_if)
                 break;
+            temp = temp->next;
         }
-        if(ble_profiles[app_id].ble_status != 2){
-            ble_profiles[app_id].ble_status = 2;
+        if(temp->profile.ble_status != 2){
+            temp->profile.ble_status = 2;
             startScan(-1);
         }
         break;
@@ -449,17 +513,18 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
         ESP_LOGI(GATTC_TAG, "write char success ");
         break;
     case ESP_GATTC_DISCONNECT_EVT:
-        app_id = 0;
-        for (;app_id < MAX_PROFILE_NUM; app_id++)
+        temp = head_profile;
+        while(temp != NULL)
         {
-            if(ble_profiles[app_id].gattc_if == gattc_if)
+            if(temp->profile.gattc_if == gattc_if)
                 break;
+            temp = temp->next;
         }
-        if(memcmp(p_data->disconnect.remote_bda, ble_profiles[app_id].remote_bda, 6) == 0)
+        if(memcmp(p_data->disconnect.remote_bda, temp->profile.remote_bda, 6) == 0)
         {
-            if(ble_profiles[app_id].ble_status == 2)
-                ble_profiles[app_id].ble_status = 0;
-            ESP_LOGI(GATTC_TAG, "ESP_GATTC_DISCONNECT_EVT, app_id = %d, reason = %d", app_id, p_data->disconnect.reason);
+            if(temp->profile.ble_status == 2)
+                temp->profile.ble_status = 0;
+            ESP_LOGI(GATTC_TAG, "ESP_GATTC_DISCONNECT_EVT, profile_id = %d, reason = %d", temp->profile_id, p_data->disconnect.reason);
             printf("DISCONNECT!\n");
             startScan(-1); 
         }
@@ -480,16 +545,17 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
 {
     uint8_t *adv_name = NULL;
     uint8_t adv_name_len = 0;
-    uint8_t app_id = 0;
+    ProfileNodeT *temp = NULL;
     switch (event) {
     case ESP_GAP_BLE_READ_RSSI_COMPLETE_EVT:
-        for(;app_id < MAX_PROFILE_NUM; app_id++)
+        temp = head_profile;
+        while(temp != NULL)
         {
-            if(memcmp(param->read_rssi_cmpl.remote_addr, ble_profiles[app_id].remote_bda, 6) == 0)
+            if(memcmp(param->read_rssi_cmpl.remote_addr, temp->profile.remote_bda, 6) == 0)
                 break;
+            temp = temp->next;
         }
-        printf("ESP_GAP_BLE_READ_RSSI_COMPLETE_EVT : %d\n", param->read_rssi_cmpl.rssi);
-        ble_profiles[app_id].rssi = param->read_rssi_cmpl.rssi;
+        temp->profile.rssi = param->read_rssi_cmpl.rssi;
         break;
     case ESP_GAP_BLE_SCAN_PARAM_SET_COMPLETE_EVT: {
         break;
@@ -524,24 +590,21 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
                 esp_log_buffer_hex(GATTC_TAG, &scan_result->scan_rst.ble_adv[scan_result->scan_rst.adv_data_len], scan_result->scan_rst.scan_rsp_len);
             }
 #endif
-            app_id = 0;
-            for(;app_id < MAX_PROFILE_NUM; app_id++)
+            temp = head_profile;
+            while(temp != NULL)
             {
-                if(ble_profiles[app_id].ble_status == 2)
-                    continue;
-                if (memcmp(scan_result->scan_rst.bda, ble_profiles[app_id].remote_bda, 6) == 0)
+                if (temp->profile.ble_status != 1 && memcmp(scan_result->scan_rst.bda, temp->profile.remote_bda, 6) == 0)
                 {
-                    ble_profiles[app_id].rssi = scan_result->scan_rst.rssi;
-                    ble_profiles[app_id].adv_data_len = scan_result->scan_rst.adv_data_len + scan_result->scan_rst.scan_rsp_len;
-                    if(ble_profiles[app_id].adv_data_len > 64)
-                        ESP_LOGE(GATTC_TAG, "adv_data_len over 64 : %d", ble_profiles[app_id].adv_data_len);
-                    memcpy(ble_profiles[app_id].adv_data, scan_result->scan_rst.ble_adv, ble_profiles[app_id].adv_data_len);
-                    // ESP_LOGI(GATTC_TAG, "searched device %s\n", adv_name);
-                    // ESP_LOGE(GATTC_TAG, "scan adv data:");
-                    // esp_log_buffer_hex(GATTC_TAG, adv_data, adv_data_len);
-                    ble_profiles[app_id].ble_status = 1;
+                    temp->profile.rssi = scan_result->scan_rst.rssi;
+                    temp->profile.adv_data_len = scan_result->scan_rst.adv_data_len + scan_result->scan_rst.scan_rsp_len;
+                    if(temp->profile.adv_data_len > 64)
+                        ESP_LOGE(GATTC_TAG, "adv_data_len over 64 : %d", temp->profile.adv_data_len);
+                    memcpy(temp->profile.adv_data, scan_result->scan_rst.ble_adv, temp->profile.adv_data_len);
+                    // esp_log_buffer_hex(GATTC_TAG, temp->profile.adv_data, temp->profile.adv_data_len);
+                    temp->profile.ble_status = 1;
                     break;
                 }
+                temp = temp->next;
             }
             break;
         case ESP_GAP_SEARCH_INQ_CMPL_EVT:
@@ -591,8 +654,17 @@ static void esp_gattc_cb(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if, esp
     if (event == ESP_GATTC_REG_EVT) {
         if (param->reg.status == ESP_GATT_OK) {
             ESP_LOGW(GATTC_TAG, "EVT %d, gattc if %d, app_id %d", event, gattc_if, param->reg.app_id);
-            ble_profiles[param->reg.app_id].gattc_if = gattc_if;
-            ble_profiles[param->reg.app_id].app_id = param->reg.app_id;
+
+            ProfileNodeT *temp = findProfile(param->reg.app_id);
+            if(temp != NULL)
+            {
+                temp->profile.gattc_if = gattc_if;
+                temp->profile.app_id = param->reg.app_id;
+                temp = NULL;
+            }
+            else
+                ESP_LOGE(GATTC_TAG, "app_id error : %04x", param->reg.app_id);
+
         } else {
             ESP_LOGE(GATTC_TAG, "reg app failed, app_id %04x, status %d",
                     param->reg.app_id,
@@ -604,16 +676,18 @@ static void esp_gattc_cb(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if, esp
     /* If the gattc_if equal to profile i, call profile A cb handler,
      * so here call each profile's callback */
     do {
-        int idx;
-        for (idx = 0; idx < MAX_PROFILE_NUM; idx++) {
-            if (gattc_if == ESP_GATT_IF_NONE || /* ESP_GATT_IF_NONE, not specify a certain gatt_if, need to call every profile cb function */
-                    gattc_if == ble_profiles[idx].gattc_if) {
-                if (ble_profiles[idx].gattc_cb) {
-                    ble_profiles[idx].gattc_cb(event, gattc_if, param);
+        ProfileNodeT *temp = head_profile;
+        while(temp != NULL)
+        {
+            if (gattc_if == ESP_GATT_IF_NONE || gattc_if == temp->profile.gattc_if) {
+                if (temp->profile.gattc_cb) {
+                    temp->profile.gattc_cb(event, gattc_if, param);
                 }
             }
+            temp = temp->next;
         }
     } while (0);
+
 }
 
 void startScan(int duration)
@@ -629,61 +703,103 @@ void stopScan()
     esp_ble_gap_stop_scanning();
 }
 
-uint8_t getBleStatus(uint8_t app_id)
+uint8_t getBleStatus(uint8_t profile_id)
 {
-    return ble_profiles[app_id].ble_status;
+    ProfileNodeT *temp = findProfile(profile_id);
+    if(temp != NULL)
+        return temp->profile.ble_status;
+    else
+        return 0;
 }
-uint8_t getAdvLen(uint8_t app_id)
+uint8_t getAdvLen(uint8_t profile_id)
 {
-    return ble_profiles[app_id].adv_data_len;
+    ProfileNodeT *temp = findProfile(profile_id);
+    if(temp == NULL)
+    {
+        ESP_LOGE(GATTC_TAG, "profile_id error");
+        return;
+    }
+    return temp->profile.adv_data_len;
 }
 
-int getRssi(uint8_t app_id)
+int getRssi(uint8_t profile_id)
 {
-    if(ble_profiles[app_id].ble_status == 2)
+    ProfileNodeT *temp = findProfile(profile_id);
+    if(temp == NULL)
     {
-        int last_value = ble_profiles[app_id].rssi;
+        ESP_LOGE(GATTC_TAG, "profile_id error");
+        return;
+    }
+    if(temp->profile.ble_status == 2)
+    {
+        int last_value = temp->profile.rssi;
         uint8_t i = 0;
-        esp_ble_gap_read_rssi(ble_profiles[app_id].remote_bda);
-        while(last_value == ble_profiles[app_id].rssi && i < 20)
+        esp_ble_gap_read_rssi(temp->profile.remote_bda);
+        while(last_value == temp->profile.rssi && i < 20)
         {
             i++;
             vTaskDelay(10 / portTICK_RATE_MS);
         }
     }
-    return ble_profiles[app_id].rssi;
+    return temp->profile.rssi;
 }
 
-void get_AdvData(uint8_t app_id, uint8_t *buff)
+void get_AdvData(uint8_t profile_id, uint8_t *buff)
 {
-    memcpy(buff, ble_profiles[app_id].adv_data, ble_profiles[app_id].adv_data_len);
+    ProfileNodeT *temp = findProfile(profile_id);
+    if(temp == NULL)
+    {
+        ESP_LOGE(GATTC_TAG, "profile_id error");
+        return;
+    }
+    memcpy(buff, temp->profile.adv_data, temp->profile.adv_data_len);
 }
 
-void disconnectBle(uint8_t app_id) {
-    if(ble_profiles[app_id].ble_status == 2) {
+void disconnectBle(uint8_t profile_id) {
+    ProfileNodeT *temp = findProfile(profile_id);
+    if(temp == NULL)
+    {
+        ESP_LOGE(GATTC_TAG, "profile_id error");
+        return;
+    }
+    if(temp->profile.ble_status == 2) {
         ESP_LOGE(GATTC_TAG, "disconnect BLE");
-        esp_ble_gap_disconnect(ble_profiles[app_id].remote_bda);
+        esp_ble_gap_disconnect(temp->profile.remote_bda);
     }
 }
 
-bool getDataStatus(uint8_t app_id, uint8_t s_id, uint8_t ch_id) {
-    return ble_profiles[app_id].services[s_id].chars[ch_id].have_data;
+bool getDataStatus(uint8_t profile_id, uint8_t s_id, uint8_t ch_id) {
+    ProfileNodeT *temp = findProfile(profile_id);
+    if(temp == NULL)
+    {
+        ESP_LOGE(GATTC_TAG, "profile_id error");
+        return;
+    }
+    return temp->profile.services[s_id].chars[ch_id].have_data;
 }
 
-uint8_t getNotifyLen(uint8_t app_id, uint8_t s_id, uint8_t ch_id) 
+uint8_t getNotifyLen(uint8_t profile_id, uint8_t s_id, uint8_t ch_id) 
 {
-    return ble_profiles[app_id].services[s_id].chars[ch_id].notify_len;
+    ProfileNodeT *temp = findProfile(profile_id);
+    if(temp == NULL)
+    {
+        ESP_LOGE(GATTC_TAG, "profile_id error");
+        return;
+    }
+    return temp->profile.services[s_id].chars[ch_id].notify_len;
 }
 
-void getNotifyVlaue(uint8_t app_id, uint8_t s_id, uint8_t ch_id, uint8_t *target) {
-    memcpy(target, ble_profiles[app_id].services[s_id].chars[ch_id].notify_value, ble_profiles[app_id].services[s_id].chars[ch_id].notify_len);
-    ble_profiles[app_id].services[s_id].chars[ch_id].have_data = false;
+void getNotifyVlaue(uint8_t profile_id, uint8_t s_id, uint8_t ch_id, uint8_t *target) {
+    ProfileNodeT *temp = findProfile(profile_id);
+    if(temp == NULL)
+    {
+        ESP_LOGE(GATTC_TAG, "profile_id error");
+        return;
+    }
+    memcpy(target, temp->profile.services[s_id].chars[ch_id].notify_value, temp->profile.services[s_id].chars[ch_id].notify_len);
+    temp->profile.services[s_id].chars[ch_id].have_data = false;
 }
 
-void setBleBda(uint8_t app_id, uint8_t *bda)
-{
-    memcpy(ble_profiles[app_id].remote_bda, bda, 6);
-}
 void initBle()
 {
     printf("initBle\n");
@@ -740,59 +856,17 @@ void initBle()
     if (local_mtu_ret){
         ESP_LOGE(GATTC_TAG, "set local  MTU failed, error code = %x", local_mtu_ret);
     }
-    for(int i = 0; i < MAX_PROFILE_NUM; i++)
-    {
-        ble_profiles[i].gattc_cb = gattc_profile_event_handler;
-        ble_profiles[i].gattc_if = ESP_GATT_IF_NONE;
-        ble_profiles[i].app_id = i;
-        esp_err_t ret = esp_ble_gattc_app_register(i);
-        if (ret)
-            ESP_LOGE(GATTC_TAG, "%s gattc app register failed, error code = %x\n", __func__, ret);
-    }
 }
 
-void initUuid(uint8_t app_id, UuidsT *myUUIDs, uint8_t service_num)
-{
-    printf("initUuid\nr");
-
-    if(service_num > MAX_SERVICE_NUM)
-    {
-        ESP_LOGE(GATTC_TAG, "service_num > MAX_SERVICE_NUM");
-        ble_profiles[app_id].service_num = 0;
-        return;
-    }
-    ble_profiles[app_id].service_num = service_num;
-    ble_profiles[app_id].services = calloc(service_num, sizeof(BleServiceT));
-    if(ble_profiles[app_id].services == NULL)
-    {
-        ESP_LOGE(GATTC_TAG, "services calloc fail");
-        return;
-    }
-    for(uint8_t i = 0; i < service_num; i++)
-    {
-        ble_profiles[app_id].services[i].service_uuid = myUUIDs[i].service_uuid;
-        if(myUUIDs[i].char_num > MAX_CHAR_NUM)
-        {
-            ESP_LOGE(GATTC_TAG, "char_num[%d] > MAX_CHAR_NUM", i);
-            ble_profiles[app_id].services[i].char_num = 0;
-            continue;
-        }
-        ble_profiles[app_id].services[i].char_num = myUUIDs[i].char_num;
-        ble_profiles[app_id].services[i].chars = calloc(myUUIDs[i].char_num, sizeof(BleCharT));
-        if(ble_profiles[app_id].services[i].chars == NULL)
-        {
-            ESP_LOGE(GATTC_TAG, "chars calloc fail");
-            return;
-        }
-        for(uint8_t j = 0; j < myUUIDs[i].char_num; j++)
-            ble_profiles[app_id].services[i].chars[j].char_uuid = myUUIDs[i].char_uuid[j];
-    }
-}
-
-void openProfile(uint8_t app_id)
+void openProfile(uint8_t profile_id)
 {
     printf("openProfile in client.c\n");
     stopScan();
     vTaskDelay(pdMS_TO_TICKS(50));
-    esp_ble_gattc_open(ble_profiles[app_id].gattc_if, ble_profiles[app_id].remote_bda, 0, true);  
+
+    ProfileNodeT *temp = findProfile(profile_id);
+    if(temp != NULL) 
+        esp_ble_gattc_open(temp->profile.gattc_if, temp->profile.remote_bda, 0, true);  
+    else
+        ESP_LOGE(GATTC_TAG, "openProfile error");
 }

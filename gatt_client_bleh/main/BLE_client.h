@@ -58,27 +58,25 @@ struct ProfileNode
 };
 typedef struct ProfileNode ProfileNodeT;
 
-void addProfile(BleProfileT profile);
-void insertProfile(uint8_t profile_id, BleProfileT profile);
+void addProfile(UuidsT *myUUIDs, uint8_t service_num, uint8_t *bda);
+// void insertProfile(uint8_t profile_id, UuidsT *myUUIDs, uint8_t service_num);
 void deleteProfile(uint8_t profile_id);
 ProfileNodeT *findProfile(uint8_t profile_id);
 
-
-void sendCommand(uint8_t app_id, uint8_t s_id, uint8_t ch_id, const uint8_t *cmd, int len);
+void sendCommand(uint8_t profile_id, uint8_t s_id, uint8_t ch_id, const uint8_t *cmd, int len);
 void initBle();
 void startScan(int duration);
 void stopScan();
-void disconnectBle(uint8_t app_id);
-void requestRead(uint8_t app_id, uint8_t s_id, uint8_t ch_id);
-void initUuid(uint8_t app_id, UuidsT *myUUIDs, uint8_t service_num);
-void openProfile(uint8_t app_id);
-uint8_t getBleStatus(uint8_t app_id);
-bool getDataStatus(uint8_t app_id, uint8_t s_id, uint8_t ch_id);
-uint8_t getNotifyLen(uint8_t app_id, uint8_t s_id, uint8_t ch_id);
-void getNotifyVlaue(uint8_t app_id, uint8_t s_id, uint8_t ch_id, uint8_t *target);
-uint8_t getAdvLen(uint8_t app_id);
-void get_AdvData(uint8_t app_id, uint8_t *buff);
-int getRssi(uint8_t app_id);
-void setBleBda(uint8_t app_id, uint8_t *bda);
+void disconnectBle(uint8_t profile_id);
+void requestRead(uint8_t profile_id, uint8_t s_id, uint8_t ch_id);
+void openProfile(uint8_t profile_id);
+uint8_t getBleStatus(uint8_t profile_id);
+bool getDataStatus(uint8_t profile_id, uint8_t s_id, uint8_t ch_id);
+uint8_t getNotifyLen(uint8_t profile_id, uint8_t s_id, uint8_t ch_id);
+void getNotifyVlaue(uint8_t profile_id, uint8_t s_id, uint8_t ch_id, uint8_t *target);
+uint8_t getAdvLen(uint8_t profile_id);
+void get_AdvData(uint8_t profile_id, uint8_t *buff);
+int getRssi(uint8_t profile_id);
+void setBleBda(uint8_t profile_id, uint8_t *bda);
 
 #endif /* BLE_CLIENT_H_ */

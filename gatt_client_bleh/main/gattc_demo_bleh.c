@@ -68,59 +68,99 @@ uint8_t bda[2][6] = {{0xC0, 0x26, 0xDA, 0x03, 0x98, 0x71},
                     {0xBC, 0xDD, 0xC2, 0xDF, 0x8D, 0xAA}};
 
 uint8_t is_send[2] = {0};
-bool need_to_open[2] = {true, true};
-// bool have_opened[2] = {0};  // need to delete later
 void test(void *arg)
 {
     initBle();
-    for(uint8_t i = 0; i < 2; i++)
-        setBleBda(i, bda[i]);
-    
-    initUuid(0, myUUID1, 1);
-    initUuid(1, myUUID2, 2);
+    addProfile(myUUID1, 1, bda[0]);
+    addProfile(myUUID2, 2, bda[1]);
     startScan(-1);
     while (1)
     {
-        for(uint8_t i = 0; i < 2; i++)
-            printf("status[%d] = %d\n", i, getBleStatus(i));
-        printf("\n");
-        for(uint8_t i = 0; i < 2; i++)
+        ProfileNodeT *temp = findProfile(0);
+        uint8_t pro_id = 0;
+        while(temp != NULL)
         {
-            uint8_t status = getBleStatus(i);
+            printf("state[%d] = %d\n", pro_id, getBleStatus(pro_id));
+            pro_id++;
+            temp = temp->next;
+        }
+        temp = findProfile(0);
+        pro_id = 0;
+        while(temp != NULL)
+        {
+            uint8_t status = getBleStatus(pro_id);
             if(status == 1)
             {
-                
-                openProfile(i);
+                openProfile(pro_id);
                 vTaskDelay(pdMS_TO_TICKS(150));
             }
-            if(!is_send[i] && status == 2)
+            if(!is_send[pro_id] && status == 2)
             {
-                uint8_t cmd[] = {0x51, 0x2B, 0x01, 0x00, 0x00, 0x00, 0xA3, 0x20};
-                sendCommand(i, 0, 0, cmd, 8);
-                if(i == 1)
-                    sendCommand(i, 1, 0, cmd, 8);
-                is_send[i] = 1;
-            }
-            if(is_send[i] > 0)
-                is_send[i] = (is_send[i] >= 2)? 0 : is_send[i] + 1;
-            if(getDataStatus(i, 0, 0))
-            {
-                printf("notify[%d] : ", i);
-                is_send[i] = 0;
-                uint8_t rec[32];
-                uint8_t len = getNotifyLen(i, 0, 0);
-                if(len > 32)
-                    printf("over size\n");
+                if(pro_id == 1)
+                {
+                    uint8_t cmd[2][2]= {{0xf0, 0xf1}, {0xf2, 0xf3}};
+                    sendCommand(pro_id, 0, 0, cmd[0], 2);
+                    sendCommand(pro_id, 1, 0, cmd[1], 2);
+                }
                 else
                 {
-                    getNotifyVlaue(i, 0, 0, rec);
-                    for(int i = 0; i < len; i++)
+                    uint8_t cmd[] = {0x51, 0x2B, 0x01, 0x00, 0x00, 0x00, 0xA3, 0x20};
+                    sendCommand(pro_id, 0, 0, cmd, 8);
+                }
+                is_send[pro_id] = 1;
+            }
+            if(is_send[pro_id] > 0)
+                is_send[pro_id] = (is_send[pro_id] >= 2)? 0 : is_send[pro_id] + 1;
+            if(getDataStatus(pro_id, 0, 0))
+            {
+                printf("notify[%d] : \n", pro_id);
+                is_send[pro_id] = 0;
+                uint8_t rec[32];
+                if(pro_id == 1)
+                {
+                    uint8_t len = getNotifyLen(pro_id, 0, 0);
+                    if(len > 32)
+                    printf("over size\n");
+                    else
                     {
-                        printf("%02X ", rec[i]);
+                        getNotifyVlaue(pro_id, 0, 0, rec);
+                        for(int i = 0; i < len; i++)
+                        {
+                            printf("%02X ", rec[i]);
+                        }
+                        printf("\n");
                     }
-                    printf("\n\n");
+                    len = getNotifyLen(pro_id, 1, 0);
+                    if(len > 32)
+                    printf("over size\n");
+                    else
+                    {
+                        getNotifyVlaue(pro_id, 1, 0, rec);
+                        for(int i = 0; i < len; i++)
+                        {
+                            printf("%02X ", rec[i]);
+                        }
+                        printf("\n\n");
+                    }
+                }
+                else
+                {
+                    uint8_t len = getNotifyLen(pro_id, 0, 0);
+                    if(len > 32)
+                    printf("over size\n");
+                    else
+                    {
+                        getNotifyVlaue(pro_id, 0, 0, rec);
+                        for(int i = 0; i < len; i++)
+                        {
+                            printf("%02X ", rec[i]);
+                        }
+                        printf("\n\n");
+                    }
                 }
             }
+            temp = temp->next;
+            pro_id++;
         }
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
@@ -129,19 +169,15 @@ void test(void *arg)
 void app_main(void)
 {
     
-    // BleProfileT temp;
-    // temp.rssi = 1000;
-    // addProfile(temp);
-    // temp.rssi = 1001;
-    // addProfile(temp);
-    // temp.rssi = 1002;
-    // insertProfile(1, temp);
-    // deleteProfile(0);
+    
+    // addProfile(myUUID1, 1);
+    // insertProfile(0, myUUID2, 2);
+    // deleteProfile(1);
 
     // ProfileNodeT *trip = findProfile(0);
     // while(trip != NULL)
     // {
-    //     printf("trival : id : %d, rssi : %d\n", trip->profile_id, trip->profile.rssi);
+    //     printf("trival -> id : %d, service num : %d\n", trip->profile_id, trip->profile.service_num);
     //     trip = trip->next;
     // }
 
