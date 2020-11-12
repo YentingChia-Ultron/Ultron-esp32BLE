@@ -105,24 +105,23 @@ void insertProfile(uint8_t profile_id, BleProfileT profile)
     }
 }
 
+
 void deleteProfile(uint8_t profile_id)
 {
 	ProfileNodeT *current = head_profile;
-	ProfileNodeT *temp;
+	ProfileNodeT *temp = NULL;
 
 	if(profile_id == 0) {
         temp = head_profile;
 		head_profile = current->next;
         current = current->next;
-		free(temp);
 	}
     else{
         while(current->next != NULL) {
             if(current->next->profile_id == profile_id) {
                 temp = current->next;
                 current->next = current->next->next;
-                current = current->next;	
-                free(temp);
+                current = current->next;
                 break;
             }
             current = current->next;
@@ -132,6 +131,13 @@ void deleteProfile(uint8_t profile_id)
     {
         current->profile_id--;
         current = current->next;
+    }
+    if(temp != NULL)
+    {
+        for(uint8_t i = 0; i < temp->profile.service_num; i++)
+            free(temp->profile.services[i].chars);
+        free(temp->profile.services);
+        free(temp);
     }
 }
 ProfileNodeT *findProfile(uint8_t profile_id)
