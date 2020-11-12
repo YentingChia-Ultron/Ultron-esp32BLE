@@ -3,30 +3,82 @@
 
 #include <stdint.h>
 #include "esp_gap_ble_api.h"
+#include "esp_gattc_api.h"
 
-struct uuids
+#define MAX_SERVICE_NUM      5
+#define MAX_CHAR_NUM      5
+#define MAX_PROFILE_NUM      CONFIG_BTDM_CTRL_BLE_MAX_CONN
+
+struct Uuids
 {
     esp_bt_uuid_t service_uuid;
-    esp_bt_uuid_t char_uuid;
+    uint8_t char_num;
+    esp_bt_uuid_t *char_uuid;
 };
+typedef struct Uuids UuidsT;
 
-typedef struct uuids uuid_t;
+struct BleChar {
+    uint16_t char_handle;
+    esp_bt_uuid_t char_uuid;
+    uint8_t notify_value[32];
+    uint8_t notify_len;
+    bool have_data;
+};
+typedef struct BleChar BleCharT;
 
-void send_command(uint8_t app_id, const uint8_t *cmd, int len);
-void init_BLE();
-void start_scan(int duration);
-void stop_scan();
-void disconnect_BLE(uint8_t app_id);
-void request_read(uint8_t app_id);
-void init_profile(uint8_t app_id, uuid_t myUUIDs);
-void open_profile(uint8_t app_id);
-uint8_t get_ble_status(uint8_t app_id);
-bool get_data_status(uint8_t app_id);
-uint8_t get_notify_len(uint8_t app_id);
-void get_notify_vlaue(uint8_t app_id, uint8_t *target);
-uint8_t get_adv_data_len(uint8_t app_id);
-void get_adv_data(uint8_t app_id, uint8_t *buff);
-int get_rssi(uint8_t app_id);
-void set_ble_bda(uint8_t app_id, uint8_t *bda);
+struct BleService {
+    esp_bt_uuid_t service_uuid;
+    uint16_t service_start_handle;
+    uint16_t service_end_handle;
+    uint8_t char_num;
+    BleCharT *chars;
+};
+typedef struct BleService BleServiceT;
+
+struct BleProfile{
+    esp_gattc_cb_t gattc_cb;
+    uint16_t gattc_if;
+    uint16_t app_id;
+    uint16_t conn_id;
+    esp_bd_addr_t remote_bda;
+    uint8_t adv_data[64];
+    uint8_t adv_data_len;
+    int rssi;
+    uint8_t ble_status;  //1 : find, 2 : connect
+    uint8_t service_num;
+    BleServiceT *services;
+};
+typedef struct BleProfile BleProfileT;
+
+struct ProfileNode
+{
+    uint8_t profile_id;
+	BleProfileT profile;
+	struct ProfileNode *next;
+};
+typedef struct ProfileNode ProfileNodeT;
+
+void addProfile(BleProfileT profile);
+void insertProfile(uint8_t profile_id, BleProfileT profile);
+void deleteProfile(uint8_t profile_id);
+ProfileNodeT *findProfile(uint8_t profile_id);
+
+
+void sendCommand(uint8_t app_id, uint8_t s_id, uint8_t ch_id, const uint8_t *cmd, int len);
+void initBle();
+void startScan(int duration);
+void stopScan();
+void disconnectBle(uint8_t app_id);
+void requestRead(uint8_t app_id, uint8_t s_id, uint8_t ch_id);
+void initUuid(uint8_t app_id, UuidsT *myUUIDs, uint8_t service_num);
+void openProfile(uint8_t app_id);
+uint8_t getBleStatus(uint8_t app_id);
+bool getDataStatus(uint8_t app_id, uint8_t s_id, uint8_t ch_id);
+uint8_t getNotifyLen(uint8_t app_id, uint8_t s_id, uint8_t ch_id);
+void getNotifyVlaue(uint8_t app_id, uint8_t s_id, uint8_t ch_id, uint8_t *target);
+uint8_t getAdvLen(uint8_t app_id);
+void get_AdvData(uint8_t app_id, uint8_t *buff);
+int getRssi(uint8_t app_id);
+void setBleBda(uint8_t app_id, uint8_t *bda);
 
 #endif /* BLE_CLIENT_H_ */
