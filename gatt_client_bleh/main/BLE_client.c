@@ -24,6 +24,8 @@ static esp_gattc_char_elem_t *char_elem_result   = NULL;
 static esp_gattc_descr_elem_t *descr_elem_result = NULL;
 bool scan_forever = false;
 ProfileNodeT *head_profile = NULL;
+uint8_t connect_info_num = 0;
+ConnectInfoT *connect_infos = NULL;
 
 /* Declare static functions */
 static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param);
@@ -44,9 +46,15 @@ static esp_ble_scan_params_t ble_scan_params = {
     .scan_duplicate         = BLE_SCAN_DUPLICATE_DISABLE
 };
 
+void setConnectInfo(ConnectInfoT* infos, uint8_t info_num)
+{
+    connect_infos = calloc(info_num, sizeof(ConnectInfoT));
+    for(uint8_t i = 0; i < info_num; i++)
+        connect_infos[i] = infos[i];
+    connect_info_num = info_num;
+}
 
-
-void addProfile(UuidsT *myUUIDs, uint8_t service_num, uint8_t *bda)
+void addProfile(uint8_t dev_id, UuidsT *myUUIDs, uint8_t service_num)
 {
     BleProfileT profile;
     if(service_num > MAX_SERVICE_NUM)
@@ -83,7 +91,7 @@ void addProfile(UuidsT *myUUIDs, uint8_t service_num, uint8_t *bda)
     }
     profile.gattc_cb = gattc_profile_event_handler;
     profile.gattc_if = ESP_GATT_IF_NONE;
-    memcpy(profile.remote_bda, bda, 6);
+    memcpy(profile.remote_bda, connect_infos[dev_id].bda, 6);
 
 	ProfileNodeT *new_node = (ProfileNodeT*)calloc(1, sizeof(ProfileNodeT));
     if(new_node == NULL)
@@ -112,81 +120,8 @@ void addProfile(UuidsT *myUUIDs, uint8_t service_num, uint8_t *bda)
     esp_err_t ret = esp_ble_gattc_app_register(new_node->profile_id);
     if (ret)
         ESP_LOGE(GATTC_TAG, "%s gattc app register failed, error code = %x\n", __func__, ret);
+    new_node->dev_id = dev_id;
 }
-// void insertProfile(uint8_t profile_id, UuidsT *myUUIDs, uint8_t service_num)
-// {
-//     BleProfileT profile;
-//     if(service_num > MAX_SERVICE_NUM)
-//     {
-//         ESP_LOGE(GATTC_TAG, "service_num > MAX_SERVICE_NUM");
-//         profile.service_num = 0;
-//         return;
-//     }
-//     profile.service_num = service_num;
-//     profile.services = calloc(service_num, sizeof(BleServiceT));
-//     if(profile.services == NULL)
-//     {
-//         ESP_LOGE(GATTC_TAG, "services calloc fail");
-//         return;
-//     }
-//     for(uint8_t i = 0; i < service_num; i++)
-//     {
-//         profile.services[i].service_uuid = myUUIDs[i].service_uuid;
-//         if(myUUIDs[i].char_num > MAX_CHAR_NUM)
-//         {
-//             ESP_LOGE(GATTC_TAG, "char_num[%d] > MAX_CHAR_NUM", i);
-//             profile.services[i].char_num = 0;
-//             continue;
-//         }
-//         profile.services[i].char_num = myUUIDs[i].char_num;
-//         profile.services[i].chars = calloc(myUUIDs[i].char_num, sizeof(BleCharT));
-//         if(profile.services[i].chars == NULL)
-//         {
-//             ESP_LOGE(GATTC_TAG, "chars calloc fail");
-//             return;
-//         }
-//         for(uint8_t j = 0; j < myUUIDs[i].char_num; j++)
-//             profile.services[i].chars[j].char_uuid = myUUIDs[i].char_uuid[j];
-//     }
-    
-// 	ProfileNodeT *current = head_profile; 
-//     if(current == NULL){
-//         return;
-//     }
-// 	ProfileNodeT *new_node = (ProfileNodeT*)calloc(1, sizeof(ProfileNodeT));
-//     if(new_node == NULL)
-//     {
-//         ESP_LOGE(GATTC_TAG, "new_node calloc fail");
-//             return;
-//     }
-//     new_node->profile_id = profile_id;		
-//     new_node->profile = profile;
-// 	if(profile_id == 0)
-//     {
-//         new_node->next = current;
-//         current = new_node->next;
-// 		head_profile = new_node;
-//     }
-//     else
-//     {
-//         while(current->next != NULL) 
-//         {
-//             if(profile_id == current->next->profile_id) {
-//                 new_node->next = current->next;
-//                 current->next = new_node;
-//                 break;
-//             }
-//             current = current->next;
-//         }
-//     }
-// 	current = new_node->next;
-//     while(current != NULL)
-//     {
-//         current->profile_id++;
-//         current = current->next;
-//     }
-// }
-
 
 void deleteProfile(uint8_t profile_id)
 {
@@ -289,6 +224,7 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
         }
         break;
     case ESP_GATTC_CONNECT_EVT:
+        ESP_LOGI(GATTC_TAG, "ESP_GATTC_CONNECT_EVT");
         break;
     case ESP_GATTC_OPEN_EVT:
         if (param->open.status != ESP_GATT_OK){
@@ -493,8 +429,8 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
                 break;
             temp = temp->next;
         }
-        if(temp->profile.ble_status != 2){
-            temp->profile.ble_status = 2;
+        if(connect_infos[temp->dev_id].status != 2){
+            connect_infos[temp->dev_id].status = 2;
             startScan(-1);
         }
         break;
@@ -522,8 +458,8 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
         }
         if(memcmp(p_data->disconnect.remote_bda, temp->profile.remote_bda, 6) == 0)
         {
-            if(temp->profile.ble_status == 2)
-                temp->profile.ble_status = 0;
+            if(connect_infos[temp->dev_id].status == 2)
+                connect_infos[temp->dev_id].status = 0;
             ESP_LOGI(GATTC_TAG, "ESP_GATTC_DISCONNECT_EVT, profile_id = %d, reason = %d", temp->profile_id, p_data->disconnect.reason);
             printf("DISCONNECT!\n");
             startScan(-1); 
@@ -548,14 +484,14 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
     ProfileNodeT *temp = NULL;
     switch (event) {
     case ESP_GAP_BLE_READ_RSSI_COMPLETE_EVT:
-        temp = head_profile;
-        while(temp != NULL)
+        for(uint8_t i = 0; i < connect_info_num; i++)
         {
-            if(memcmp(param->read_rssi_cmpl.remote_addr, temp->profile.remote_bda, 6) == 0)
+            if(memcmp(param->read_rssi_cmpl.remote_addr, connect_infos[i].bda, 6) == 0)
+            {
+                connect_infos[i].rssi = param->read_rssi_cmpl.rssi;
                 break;
-            temp = temp->next;
+            }
         }
-        temp->profile.rssi = param->read_rssi_cmpl.rssi;
         break;
     case ESP_GAP_BLE_SCAN_PARAM_SET_COMPLETE_EVT: {
         break;
@@ -590,21 +526,18 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
                 esp_log_buffer_hex(GATTC_TAG, &scan_result->scan_rst.ble_adv[scan_result->scan_rst.adv_data_len], scan_result->scan_rst.scan_rsp_len);
             }
 #endif
-            temp = head_profile;
-            while(temp != NULL)
+            for(uint8_t i = 0; i < connect_info_num; i++)
             {
-                if (temp->profile.ble_status != 1 && memcmp(scan_result->scan_rst.bda, temp->profile.remote_bda, 6) == 0)
+                if (connect_infos[i].status == 0 && memcmp(scan_result->scan_rst.bda, connect_infos[i].bda, 6) == 0)
                 {
-                    temp->profile.rssi = scan_result->scan_rst.rssi;
-                    temp->profile.adv_data_len = scan_result->scan_rst.adv_data_len + scan_result->scan_rst.scan_rsp_len;
-                    if(temp->profile.adv_data_len > 64)
-                        ESP_LOGE(GATTC_TAG, "adv_data_len over 64 : %d", temp->profile.adv_data_len);
-                    memcpy(temp->profile.adv_data, scan_result->scan_rst.ble_adv, temp->profile.adv_data_len);
-                    // esp_log_buffer_hex(GATTC_TAG, temp->profile.adv_data, temp->profile.adv_data_len);
-                    temp->profile.ble_status = 1;
-                    break;
+                    connect_infos[i].status = 1;
+                    connect_infos[i].rssi = scan_result->scan_rst.rssi;
+                    connect_infos[i].adv_data_len = scan_result->scan_rst.adv_data_len + scan_result->scan_rst.scan_rsp_len;
+                    if(connect_infos[i].adv_data_len > 64)
+                        ESP_LOGE(GATTC_TAG, "adv_data_len over 64 : %d", connect_infos[i].adv_data_len);
+                    memcpy(connect_infos[i].adv_data, scan_result->scan_rst.ble_adv, connect_infos[i].adv_data_len);
+                    // esp_log_buffer_hex(GATTC_TAG, connect_infos[i].adv_data, connect_infos[i].adv_data_len);
                 }
-                temp = temp->next;
             }
             break;
         case ESP_GAP_SEARCH_INQ_CMPL_EVT:
@@ -703,56 +636,37 @@ void stopScan()
     esp_ble_gap_stop_scanning();
 }
 
-uint8_t getBleStatus(uint8_t profile_id)
+uint8_t getBleStatus(uint8_t dev_id)
 {
-    ProfileNodeT *temp = findProfile(profile_id);
-    if(temp != NULL)
-        return temp->profile.ble_status;
+    if(connect_infos != NULL)
+        return connect_infos[dev_id].status;
     else
         return 0;
 }
-uint8_t getAdvLen(uint8_t profile_id)
+uint8_t getAdvLen(uint8_t dev_id)
 {
-    ProfileNodeT *temp = findProfile(profile_id);
-    if(temp == NULL)
-    {
-        ESP_LOGE(GATTC_TAG, "profile_id error");
-        return;
-    }
-    return temp->profile.adv_data_len;
+    return connect_infos[dev_id].adv_data_len;
 }
 
-int getRssi(uint8_t profile_id)
+int getRssi(uint8_t dev_id)
 {
-    ProfileNodeT *temp = findProfile(profile_id);
-    if(temp == NULL)
+    if(connect_infos[dev_id].status == 2)
     {
-        ESP_LOGE(GATTC_TAG, "profile_id error");
-        return;
-    }
-    if(temp->profile.ble_status == 2)
-    {
-        int last_value = temp->profile.rssi;
+        int last_value = connect_infos[dev_id].rssi;
         uint8_t i = 0;
-        esp_ble_gap_read_rssi(temp->profile.remote_bda);
-        while(last_value == temp->profile.rssi && i < 20)
+        esp_ble_gap_read_rssi(connect_infos[dev_id].bda);
+        while(last_value == connect_infos[dev_id].rssi && i < 20)
         {
             i++;
             vTaskDelay(10 / portTICK_RATE_MS);
         }
     }
-    return temp->profile.rssi;
+    return connect_infos[dev_id].rssi;
 }
 
-void get_AdvData(uint8_t profile_id, uint8_t *buff)
+void getAdvData(uint8_t dev_id, uint8_t *buff)
 {
-    ProfileNodeT *temp = findProfile(profile_id);
-    if(temp == NULL)
-    {
-        ESP_LOGE(GATTC_TAG, "profile_id error");
-        return;
-    }
-    memcpy(buff, temp->profile.adv_data, temp->profile.adv_data_len);
+    memcpy(buff, connect_infos[dev_id].adv_data, connect_infos[dev_id].adv_data_len);
 }
 
 void disconnectBle(uint8_t profile_id) {
@@ -762,7 +676,7 @@ void disconnectBle(uint8_t profile_id) {
         ESP_LOGE(GATTC_TAG, "profile_id error");
         return;
     }
-    if(temp->profile.ble_status == 2) {
+    if(connect_infos[temp->dev_id].status == 2) {
         ESP_LOGE(GATTC_TAG, "disconnect BLE");
         esp_ble_gap_disconnect(temp->profile.remote_bda);
     }
@@ -860,7 +774,6 @@ void initBle()
 
 void openProfile(uint8_t profile_id)
 {
-    printf("openProfile in client.c\n");
     stopScan();
     vTaskDelay(pdMS_TO_TICKS(50));
 
