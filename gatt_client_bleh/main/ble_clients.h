@@ -89,6 +89,5 @@ void openProfile(uint8_t profile_id);
 bool getDataStatus(uint8_t profile_id, uint8_t s_id, uint8_t ch_id);
 uint8_t getNotifyLen(uint8_t profile_id, uint8_t s_id, uint8_t ch_id);
 void getNotifyVlaue(uint8_t profile_id, uint8_t s_id, uint8_t ch_id, uint8_t *target);
-void setBleBda(uint8_t profile_id, uint8_t *bda);
 
 #endif /* BLE_CLIENT_H_ */

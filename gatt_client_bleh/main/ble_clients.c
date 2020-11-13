@@ -14,7 +14,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
-#include "BLE_client.h"
+#include "ble_clients.h"
 
 
 #define GATTC_TAG "GATTC_DEMO_BLEH"
