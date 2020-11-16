@@ -53,8 +53,8 @@ struct ProfileNode
 {
     uint8_t dev_id;
     uint8_t profile_id;
-	BleProfileT profile;
-	struct ProfileNode *next;
+    BleProfileT profile;
+    struct ProfileNode *next;
 };
 typedef struct ProfileNode ProfileNodeT;
 

@@ -93,30 +93,30 @@ void addProfile(uint8_t dev_id, UuidsT *myUUIDs, uint8_t service_num)
     profile.gattc_if = ESP_GATT_IF_NONE;
     memcpy(profile.remote_bda, connect_infos[dev_id].bda, 6);
 
-	ProfileNodeT *new_node = (ProfileNodeT*)calloc(1, sizeof(ProfileNodeT));
+    ProfileNodeT *new_node = (ProfileNodeT*)calloc(1, sizeof(ProfileNodeT));
     if(new_node == NULL)
     {
         ESP_LOGE(GATTC_TAG, "new_node calloc fail");
             return;
     }
-	new_node->profile = profile;
-	new_node->next = NULL;
-	
-	if(head_profile == NULL) {
+    new_node->profile = profile;
+    new_node->next = NULL;
+    
+    if(head_profile == NULL) {
         new_node->profile_id = 0;
-		head_profile = new_node;
-	}
-	else {
-		ProfileNodeT *current;	
-		current = head_profile;
+        head_profile = new_node;
+    }
+    else {
+        ProfileNodeT *current;    
+        current = head_profile;
         uint8_t id = 1;
-		while(current->next != NULL) {
-			current = current->next;
+        while(current->next != NULL) {
+            current = current->next;
             id++;
-		}
+        }
         new_node->profile_id = id;
-		current->next = new_node;
-	}
+        current->next = new_node;
+    }
     esp_err_t ret = esp_ble_gattc_app_register(new_node->profile_id);
     if (ret)
         ESP_LOGE(GATTC_TAG, "%s gattc app register failed, error code = %x\n", __func__, ret);
@@ -125,14 +125,14 @@ void addProfile(uint8_t dev_id, UuidsT *myUUIDs, uint8_t service_num)
 
 void deleteProfile(uint8_t profile_id)
 {
-	ProfileNodeT *current = head_profile;
-	ProfileNodeT *temp = NULL;
+    ProfileNodeT *current = head_profile;
+    ProfileNodeT *temp = NULL;
 
-	if(profile_id == 0) {
+    if(profile_id == 0) {
         temp = head_profile;
-		head_profile = current->next;
+        head_profile = current->next;
         current = current->next;
-	}
+    }
     else{
         while(current->next != NULL) {
             if(current->next->profile_id == profile_id) {
@@ -166,14 +166,14 @@ void deleteProfile(uint8_t profile_id)
 
 ProfileNodeT *findProfile(uint8_t profile_id)
 {
-	ProfileNodeT *new_node = head_profile;
-	while(new_node != NULL) 
+    ProfileNodeT *new_node = head_profile;
+    while(new_node != NULL) 
     {
         if(new_node->profile_id == profile_id)
             return new_node;
         else
             new_node = new_node->next;
-	}
+    }
     return NULL;
 }
 
