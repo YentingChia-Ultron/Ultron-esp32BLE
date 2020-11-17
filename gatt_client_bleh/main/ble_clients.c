@@ -17,13 +17,12 @@
 #include "ble_clients.h"
 
 
-#define GATTC_TAG "GATTC_DEMO_BLEH"
+#define GATTC_TAG "BLE_CLIENTS_C"
 #define INVALID_HANDLE   0
 
 static esp_gattc_char_elem_t *char_elem_result   = NULL;
 static esp_gattc_descr_elem_t *descr_elem_result = NULL;
 bool scan_forever = false;
-ProfileNodeT *head_profile = NULL;
 uint8_t connect_info_num = 0;
 ConnectInfoT *connect_infos = NULL;
 
@@ -46,9 +45,12 @@ static esp_ble_scan_params_t ble_scan_params = {
     .scan_duplicate         = BLE_SCAN_DUPLICATE_DISABLE
 };
 
+uint8_t *scanned_check = NULL;
+
 void setConnectInfo(ConnectInfoT* infos, uint8_t info_num)
 {
     connect_infos = calloc(info_num, sizeof(ConnectInfoT));
+    scanned_check = calloc(info_num, sizeof(uint8_t));
     for(uint8_t i = 0; i < info_num; i++)
         connect_infos[i] = infos[i];
     connect_info_num = info_num;
@@ -56,159 +58,109 @@ void setConnectInfo(ConnectInfoT* infos, uint8_t info_num)
 
 void addProfile(uint8_t dev_id, UuidsT *myUUIDs, uint8_t service_num)
 {
-    BleProfileT profile;
+    connect_infos[dev_id].profile = calloc(1, sizeof(BleProfileT));
     if(service_num > MAX_SERVICE_NUM)
     {
         ESP_LOGE(GATTC_TAG, "service_num > MAX_SERVICE_NUM");
-        profile.service_num = 0;
+        connect_infos[dev_id].profile->service_num = 0;
         return;
     }
-    profile.service_num = service_num;
-    profile.services = calloc(service_num, sizeof(BleServiceT));
-    if(profile.services == NULL)
+    connect_infos[dev_id].profile->service_num = service_num;
+    connect_infos[dev_id].profile->services = calloc(service_num, sizeof(BleServiceT));
+    if(connect_infos[dev_id].profile->services == NULL)
     {
         ESP_LOGE(GATTC_TAG, "services calloc fail");
         return;
     }
     for(uint8_t i = 0; i < service_num; i++)
     {
-        profile.services[i].service_uuid = myUUIDs[i].service_uuid;
+        connect_infos[dev_id].profile->services[i].service_uuid = myUUIDs[i].service_uuid;
         if(myUUIDs[i].char_num > MAX_CHAR_NUM)
         {
             ESP_LOGE(GATTC_TAG, "char_num[%d] > MAX_CHAR_NUM", i);
-            profile.services[i].char_num = 0;
+            connect_infos[dev_id].profile->services[i].char_num = 0;
             continue;
         }
-        profile.services[i].char_num = myUUIDs[i].char_num;
-        profile.services[i].chars = calloc(myUUIDs[i].char_num, sizeof(BleCharT));
-        if(profile.services[i].chars == NULL)
+        connect_infos[dev_id].profile->services[i].char_num = myUUIDs[i].char_num;
+        connect_infos[dev_id].profile->services[i].chars = calloc(myUUIDs[i].char_num, sizeof(BleCharT));
+        if(connect_infos[dev_id].profile->services[i].chars == NULL)
         {
             ESP_LOGE(GATTC_TAG, "chars calloc fail");
             return;
         }
         for(uint8_t j = 0; j < myUUIDs[i].char_num; j++)
-            profile.services[i].chars[j].char_uuid = myUUIDs[i].char_uuid[j];
+            connect_infos[dev_id].profile->services[i].chars[j].char_uuid = myUUIDs[i].char_uuid[j];
     }
-    profile.gattc_cb = gattc_profile_event_handler;
-    profile.gattc_if = ESP_GATT_IF_NONE;
-    memcpy(profile.remote_bda, connect_infos[dev_id].bda, 6);
-
-    ProfileNodeT *new_node = (ProfileNodeT*)calloc(1, sizeof(ProfileNodeT));
-    if(new_node == NULL)
-    {
-        ESP_LOGE(GATTC_TAG, "new_node calloc fail");
-            return;
-    }
-    new_node->profile = profile;
-    new_node->next = NULL;
-    
-    if(head_profile == NULL) {
-        new_node->profile_id = 0;
-        head_profile = new_node;
-    }
-    else {
-        ProfileNodeT *current;    
-        current = head_profile;
-        uint8_t id = 1;
-        while(current->next != NULL) {
-            current = current->next;
-            id++;
-        }
-        new_node->profile_id = id;
-        current->next = new_node;
-    }
-    esp_err_t ret = esp_ble_gattc_app_register(new_node->profile_id);
+    connect_infos[dev_id].profile->gattc_cb = gattc_profile_event_handler;
+    connect_infos[dev_id].profile->gattc_if = ESP_GATT_IF_NONE;
+    esp_err_t ret = esp_ble_gattc_app_register(dev_id);
     if (ret)
         ESP_LOGE(GATTC_TAG, "%s gattc app register failed, error code = %x\n", __func__, ret);
-    new_node->dev_id = dev_id;
 }
 
-void deleteProfile(uint8_t profile_id)
+void deleteProfile(uint8_t dev_id)
 {
-    ProfileNodeT *current = head_profile;
-    ProfileNodeT *temp = NULL;
-
-    if(profile_id == 0) {
-        temp = head_profile;
-        head_profile = current->next;
-        current = current->next;
+    if(dev_id < connect_info_num){
+        esp_ble_gattc_app_unregister(connect_infos[dev_id].profile->gattc_if);
+        free(connect_infos[dev_id].profile);
+        connect_infos[dev_id].profile = NULL;
     }
-    else{
-        while(current->next != NULL) {
-            if(current->next->profile_id == profile_id) {
-                temp = current->next;
-                current->next = current->next->next;
-                current = current->next;
-                break;
-            }
-            current = current->next;
-        }
-    }
-    while(current != NULL)
-    {
-        current->profile_id--;
-        current = current->next;
-    }
-    if(temp != NULL)
-    {
-        esp_ble_gattc_app_unregister(temp->profile.gattc_if);
-        for(uint8_t i = 0; i < temp->profile.service_num; i++){
-            free(temp->profile.services[i].chars);
-            temp->profile.services[i].chars = NULL;
-        }
-        free(temp->profile.services);
-        temp->profile.services = NULL;
-        free(temp);
-        temp = NULL;
-        printf("delete sucess\n");
-    }
+    else
+        ESP_LOGE(GATTC_TAG, "deleteProfile : dev_id error %d\n", dev_id);
 }
 
-ProfileNodeT *findProfile(uint8_t profile_id)
+bool findProfile(uint8_t dev_id)
 {
-    ProfileNodeT *new_node = head_profile;
-    while(new_node != NULL) 
-    {
-        if(new_node->profile_id == profile_id)
-            return new_node;
-        else
-            new_node = new_node->next;
+    if(dev_id < connect_info_num){
+        return connect_infos[dev_id].profile != NULL;
     }
-    return NULL;
+    else
+        ESP_LOGE(GATTC_TAG, "deleteProfile : dev_id error %d\n", dev_id);
+    return false;
 }
 
-void sendCommand(uint8_t profile_id, uint8_t s_id, uint8_t ch_id, const uint8_t *cmd, int len) {
-    ProfileNodeT *temp = findProfile(profile_id);
-    if(temp == NULL)
+void sendCommand(uint8_t dev_id, uint8_t s_id, uint8_t ch_id, const uint8_t *cmd, int len) {
+    if(dev_id >= connect_info_num)
     {
-        ESP_LOGE(GATTC_TAG, "profile_id error");
+        ESP_LOGE(GATTC_TAG, "sendCommand : dev_id error %d\n", dev_id);
         return;
     }
-    temp->profile.services[s_id].chars[ch_id].have_data = false;
+    BleProfileT *temp = connect_infos[dev_id].profile;
+    if(temp == NULL)
+    {
+        ESP_LOGE(GATTC_TAG, "sendCommand : temp == NULL");
+        return;
+    }
+    temp->services[s_id].chars[ch_id].have_data = false;
     printf("\nsend cmd : ");
     for(int i = 0 ; i < len ; i++) {
         printf("%02X ", cmd[i]);
     }
     printf("\n");
-    esp_ble_gattc_write_char( temp->profile.gattc_if,
-                              temp->profile.conn_id,
-                              temp->profile.services[s_id].chars[ch_id].char_handle,
+    esp_ble_gattc_write_char( temp->gattc_if,
+                              temp->conn_id,
+                              temp->services[s_id].chars[ch_id].char_handle,
                               len,
                               cmd,
                               ESP_GATT_WRITE_TYPE_RSP,
                               ESP_GATT_AUTH_REQ_NONE);
 }
 
-void requestRead(uint8_t profile_id, uint8_t s_id, uint8_t ch_id) {
-    ProfileNodeT *temp = findProfile(profile_id);
-    if(temp == NULL)
+void requestRead(uint8_t dev_id, uint8_t s_id, uint8_t ch_id) {
+    if(dev_id >= connect_info_num)
     {
-        ESP_LOGE(GATTC_TAG, "profile_id error");
+        ESP_LOGE(GATTC_TAG, "requestRead : dev_id error %d\n", dev_id);
         return;
     }
-    esp_ble_gattc_read_char( temp->profile.gattc_if,
-                              temp->profile.conn_id,
-                              temp->profile.services[s_id].chars[ch_id].char_handle,
+    BleProfileT *temp = connect_infos[dev_id].profile;
+    if(temp == NULL)
+    {
+        ESP_LOGE(GATTC_TAG, "requestRead : temp == NULL");
+        return;
+    }
+    esp_ble_gattc_read_char( temp->gattc_if,
+                              temp->conn_id,
+                              temp->services[s_id].chars[ch_id].char_handle,
                               ESP_GATT_AUTH_REQ_NONE);
 }
 
@@ -233,16 +185,19 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
         }
         ESP_LOGI(GATTC_TAG, "open success");
         ESP_LOGI(GATTC_TAG, "ESP_GATTC_OPEN_EVT conn_id %d, if %d", p_data->open.conn_id, gattc_if);
-        ProfileNodeT *temp = head_profile;
-        while(temp != NULL)
+        uint8_t i = 0;
+        for(; i < connect_info_num; i++)
         {
-            if(temp->profile.gattc_if == gattc_if)
+            if(connect_infos[i].profile == NULL)
+                continue;
+            if(connect_infos[i].profile->gattc_if == gattc_if)
+            {
+                connect_infos[i].profile->conn_id = p_data->open.conn_id;
                 break;
-            temp = temp->next;
+            }
         }
-        memcpy(temp->profile.remote_bda, p_data->open.remote_bda, 6);
-        temp->profile.conn_id = p_data->open.conn_id;
-
+        if(i == connect_info_num)
+            printf("ESP_GATTC_OPEN_EVT error\n");
         esp_err_t mtu_ret = esp_ble_gattc_send_mtu_req (gattc_if, p_data->open.conn_id);
         if (mtu_ret){
             ESP_LOGE(GATTC_TAG, "config MTU error, error code = %x", mtu_ret);
@@ -260,33 +215,40 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
     case ESP_GATTC_SEARCH_RES_EVT: {
         ESP_LOGI(GATTC_TAG, "SEARCH RES: conn_id = %x is primary service %d", p_data->search_res.conn_id, p_data->search_res.is_primary);
         ESP_LOGI(GATTC_TAG, "start handle %d end handle %d current handle value %d", p_data->search_res.start_handle, p_data->search_res.end_handle, p_data->search_res.srvc_id.inst_id);
-        ProfileNodeT *temp = head_profile;
-        while(temp != NULL)
+        BleProfileT *temp = NULL;
+        uint8_t dev_id = 0;
+        for(; dev_id < connect_info_num; dev_id++)
         {
-            if(temp->profile.gattc_if == gattc_if)
+            if(connect_infos[dev_id].profile == NULL)
+                continue;
+            if(connect_infos[dev_id].profile->gattc_if == gattc_if)
+            {
+                temp = connect_infos[dev_id].profile;
                 break;
-            temp = temp->next;
+            }
         }
-        for(uint8_t i = 0; i < temp->profile.service_num; i++)
+        if(temp == NULL)
+            ESP_LOGE(GATTC_TAG, "ESP_GATTC_SEARCH_RES_EVT : temp == NULL");
+        for(uint8_t i = 0; i < temp->service_num; i++)
         {
             bool get_server = false;
-            if (temp->profile.services[i].service_uuid.len == ESP_UUID_LEN_16 && p_data->search_res.srvc_id.uuid.uuid.uuid16 == temp->profile.services[i].service_uuid.uuid.uuid16)
+            if (temp->services[i].service_uuid.len == ESP_UUID_LEN_16 && p_data->search_res.srvc_id.uuid.uuid.uuid16 == temp->services[i].service_uuid.uuid.uuid16)
                 get_server = true;
-            if (temp->profile.services[i].service_uuid.len == ESP_UUID_LEN_32 && p_data->search_res.srvc_id.uuid.uuid.uuid32 == temp->profile.services[i].service_uuid.uuid.uuid32)
+            if (temp->services[i].service_uuid.len == ESP_UUID_LEN_32 && p_data->search_res.srvc_id.uuid.uuid.uuid32 == temp->services[i].service_uuid.uuid.uuid32)
                 get_server = true;
-            else if (temp->profile.services[i].service_uuid.len == ESP_UUID_LEN_128 && memcmp(p_data->search_res.srvc_id.uuid.uuid.uuid128, temp->profile.services[i].service_uuid.uuid.uuid128, ESP_UUID_LEN_128) == 0)
+            else if (temp->services[i].service_uuid.len == ESP_UUID_LEN_128 && memcmp(p_data->search_res.srvc_id.uuid.uuid.uuid128, temp->services[i].service_uuid.uuid.uuid128, ESP_UUID_LEN_128) == 0)
                 get_server = true;
             if (get_server) 
             {
                 ESP_LOGI(GATTC_TAG, "service found");
-                temp->profile.services[i].service_start_handle = p_data->search_res.start_handle;
-                temp->profile.services[i].service_end_handle = p_data->search_res.end_handle;
-                if(temp->profile.services[i].service_uuid.len == ESP_UUID_LEN_16)
+                temp->services[i].service_start_handle = p_data->search_res.start_handle;
+                temp->services[i].service_end_handle = p_data->search_res.end_handle;
+                if(temp->services[i].service_uuid.len == ESP_UUID_LEN_16)
                     ESP_LOGI(GATTC_TAG, "UUID16: %04X", p_data->search_res.srvc_id.uuid.uuid.uuid16);
-                else if(temp->profile.services[i].service_uuid.len == ESP_UUID_LEN_32)
+                else if(temp->services[i].service_uuid.len == ESP_UUID_LEN_32)
                     ESP_LOGI(GATTC_TAG, "UUID32: %04X", p_data->search_res.srvc_id.uuid.uuid.uuid32);
                 else
-                    esp_log_buffer_hex(GATTC_TAG, p_data->search_res.srvc_id.uuid.uuid.uuid128, temp->profile.services[i].service_uuid.len);
+                    esp_log_buffer_hex(GATTC_TAG, p_data->search_res.srvc_id.uuid.uuid.uuid128, temp->services[i].service_uuid.len);
 
                 //find char
                 for(uint8_t j = 0; j < MAX_CHAR_NUM; j++)
@@ -295,8 +257,8 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
                     esp_gatt_status_t status = esp_ble_gattc_get_attr_count( gattc_if,
                                                                             p_data->search_res.conn_id,
                                                                             ESP_GATT_DB_CHARACTERISTIC,
-                                                                            temp->profile.services[i].service_start_handle,
-                                                                            temp->profile.services[i].service_end_handle,
+                                                                            temp->services[i].service_start_handle,
+                                                                            temp->services[i].service_end_handle,
                                                                             INVALID_HANDLE,
                                                                             &count);
                     if (status != ESP_GATT_OK)
@@ -309,9 +271,9 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
                         {
                             status = esp_ble_gattc_get_char_by_uuid( gattc_if,
                                                                     p_data->search_res.conn_id,
-                                                                    temp->profile.services[i].service_start_handle,
-                                                                    temp->profile.services[i].service_end_handle,
-                                                                    temp->profile.services[i].chars[j].char_uuid,
+                                                                    temp->services[i].service_start_handle,
+                                                                    temp->services[i].service_end_handle,
+                                                                    temp->services[i].chars[j].char_uuid,
                                                                     char_elem_result,
                                                                     &count);
                             if (status != ESP_GATT_OK)
@@ -319,8 +281,8 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
                             ESP_LOGI(GATTC_TAG, "char_elem_result count = %d   ", count);
                             /*  Every service have only one char in our 'ESP_GATTS_DEMO' demo, so we used first 'char_elem_result' */
                             if (count > 0 && (char_elem_result[0].properties & ESP_GATT_CHAR_PROP_BIT_NOTIFY)){
-                                temp->profile.services[i].chars[j].char_handle = char_elem_result[0].char_handle;
-                                esp_ble_gattc_register_for_notify(gattc_if, temp->profile.remote_bda, char_elem_result[0].char_handle);
+                                temp->services[i].chars[j].char_handle = char_elem_result[0].char_handle;
+                                esp_ble_gattc_register_for_notify(gattc_if, connect_infos[dev_id].bda, char_elem_result[0].char_handle);
                             }
                         }
                         /* free char_elem_result */
@@ -350,13 +312,19 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
          break;
     case ESP_GATTC_REG_FOR_NOTIFY_EVT: {
         ESP_LOGI(GATTC_TAG, "ESP_GATTC_REG_FOR_NOTIFY_EVT");
-        ProfileNodeT *temp = head_profile;
-        while(temp != NULL)
+        BleProfileT *temp = NULL;
+        for(uint8_t i = 0; i < connect_info_num; i++)
         {
-            if(temp->profile.gattc_if == gattc_if)
+            if(connect_infos[i].profile == NULL)
+                continue;
+            if(connect_infos[i].profile->gattc_if == gattc_if)
+            {
+                temp = connect_infos[i].profile;
                 break;
-            temp = temp->next;
+            }
         }
+        if(temp == NULL)
+            ESP_LOGE(GATTC_TAG, "ESP_GATTC_REG_FOR_NOTIFY_EVT : temp == NULL");
         if (p_data->reg_for_notify.status != ESP_GATT_OK){
             ESP_LOGE(GATTC_TAG, "REG FOR NOTIFY failed: error status = %d", p_data->reg_for_notify.status);
         }else{
@@ -367,7 +335,7 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
                 ESP_LOGE(GATTC_TAG, "malloc error, gattc no mem");
             }else{
                 esp_gatt_status_t ret_status = esp_ble_gattc_get_descr_by_char_handle( gattc_if,
-                                                                     temp->profile.conn_id,
+                                                                     temp->conn_id,
                                                                      p_data->reg_for_notify.handle,
                                                                      notify_descr_uuid,
                                                                      descr_elem_result,
@@ -378,7 +346,7 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
                 /* Every char has only one descriptor in our 'ESP_GATTS_DEMO' demo, so we used first 'descr_elem_result' */
                 if (count > 0 && descr_elem_result[0].uuid.len == ESP_UUID_LEN_16 && descr_elem_result[0].uuid.uuid.uuid16 == ESP_GATT_UUID_CHAR_CLIENT_CONFIG){
                     ret_status = esp_ble_gattc_write_char_descr( gattc_if,
-                                                                 temp->profile.conn_id,
+                                                                 temp->conn_id,
                                                                  descr_elem_result[0].handle,
                                                                  sizeof(notify_en),
                                                                  (uint8_t *)&notify_en,
@@ -398,42 +366,52 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
     case ESP_GATTC_NOTIFY_EVT:
         ESP_LOGE(GATTC_TAG, "ESP_GATTC_NOTIFY_EVT");
         esp_log_buffer_hex(GATTC_TAG, p_data->notify.value, p_data->notify.value_len);
-        temp = head_profile;
-        while(temp != NULL)
+        BleProfileT *temp = NULL;
+        for(uint8_t i = 0; i < connect_info_num; i++)
         {
-            if(temp->profile.gattc_if == gattc_if)
+            if(connect_infos[i].profile == NULL)
+                continue;
+            if(connect_infos[i].profile->gattc_if == gattc_if)
+            {
+                temp = connect_infos[i].profile;
                 break;
-            temp = temp->next;
+            }
         }
+        if(temp == NULL)
+            ESP_LOGE(GATTC_TAG, "ESP_GATTC_NOTIFY_EVT : temp == NULL");
         bool find = false;
-        for(int i = 0; i < temp->profile.service_num; i++)
+        for(int i = 0; i < temp->service_num; i++)
         {
             for(int j = 0; j < MAX_CHAR_NUM; j++)
             {
-                if(p_data->notify.handle == temp->profile.services[i].chars[j].char_handle)
+                if(p_data->notify.handle == temp->services[i].chars[j].char_handle)
                 {
-                    temp->profile.services[i].chars[j].notify_len = p_data->notify.value_len;
-                    memcpy(temp->profile.services[i].chars[j].notify_value, p_data->notify.value, temp->profile.services[i].chars[j].notify_len);
-                    temp->profile.services[i].chars[j].have_data = true;
+                    temp->services[i].chars[j].notify_len = p_data->notify.value_len;
+                    memcpy(temp->services[i].chars[j].notify_value, p_data->notify.value, temp->services[i].chars[j].notify_len);
+                    temp->services[i].chars[j].have_data = true;
                 }
             }
             if(find)
                 break;
         }
         break;
-    case ESP_GATTC_WRITE_DESCR_EVT:
-        temp = head_profile;
-        while(temp != NULL)
+    case ESP_GATTC_WRITE_DESCR_EVT:{
+        uint8_t i = 0;
+        for(; i < connect_info_num; i++)
         {
-            if(temp->profile.gattc_if == gattc_if)
+            if(connect_infos[i].profile == NULL)
+                continue;
+            if(connect_infos[i].profile->gattc_if == gattc_if)
                 break;
-            temp = temp->next;
         }
-        if(connect_infos[temp->dev_id].status != 2){
-            connect_infos[temp->dev_id].status = 2;
+        if(i == connect_info_num)
+            ESP_LOGE(GATTC_TAG, "ESP_GATTC_WRITE_DESCR_EVT : i == connect_info_num");
+        if(connect_infos[i].status != 2){
+            connect_infos[i].status = 2;
             startScan(-1);
         }
         break;
+    }
     case ESP_GATTC_SRVC_CHG_EVT: {
         esp_bd_addr_t bda;
         memcpy(bda, p_data->srvc_chg.remote_bda, sizeof(esp_bd_addr_t));
@@ -448,23 +426,26 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
         }
         ESP_LOGI(GATTC_TAG, "write char success ");
         break;
-    case ESP_GATTC_DISCONNECT_EVT:
-        temp = head_profile;
-        while(temp != NULL)
+    case ESP_GATTC_DISCONNECT_EVT:{
+        uint8_t i = 0;
+        for(; i < connect_info_num; i++)
         {
-            if(temp->profile.gattc_if == gattc_if)
+            if(connect_infos[i].profile == NULL)
+                continue;
+            if(connect_infos[i].profile->gattc_if == gattc_if)
                 break;
-            temp = temp->next;
         }
-        if(memcmp(p_data->disconnect.remote_bda, temp->profile.remote_bda, 6) == 0)
+        if(i == connect_info_num)
+            ESP_LOGE(GATTC_TAG, "ESP_GATTC_DISCONNECT_EVT : i == connect_info_num");
+        if(memcmp(p_data->disconnect.remote_bda, connect_infos[i].bda, 6) == 0)
         {
-            if(connect_infos[temp->dev_id].status == 2)
-                connect_infos[temp->dev_id].status = 0;
-            ESP_LOGI(GATTC_TAG, "ESP_GATTC_DISCONNECT_EVT, profile_id = %d, reason = %d", temp->profile_id, p_data->disconnect.reason);
+            connect_infos[i].status = 0;
+            ESP_LOGI(GATTC_TAG, "ESP_GATTC_DISCONNECT_EVT, id = %d, reason = %d", i, p_data->disconnect.reason);
             printf("DISCONNECT!\n");
             startScan(-1); 
         }
         break;
+    }
     case ESP_GATTC_READ_CHAR_EVT:
         if (p_data->read.status != ESP_GATT_OK){
             ESP_LOGE(GATTC_TAG, "read char failed, error status = %x", p_data->read.status);
@@ -481,7 +462,6 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
 {
     uint8_t *adv_name = NULL;
     uint8_t adv_name_len = 0;
-    ProfileNodeT *temp = NULL;
     switch (event) {
     case ESP_GAP_BLE_READ_RSSI_COMPLETE_EVT:
         for(uint8_t i = 0; i < connect_info_num; i++)
@@ -525,11 +505,12 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
                 ESP_LOGI(GATTC_TAG, "scan resp:");
                 esp_log_buffer_hex(GATTC_TAG, &scan_result->scan_rst.ble_adv[scan_result->scan_rst.adv_data_len], scan_result->scan_rst.scan_rsp_len);
             }
-#endif
+#endif      
             for(uint8_t i = 0; i < connect_info_num; i++)
             {
-                if (connect_infos[i].status == 0 && memcmp(scan_result->scan_rst.bda, connect_infos[i].bda, 6) == 0)
+                if (connect_infos[i].status != 2 && memcmp(scan_result->scan_rst.bda, connect_infos[i].bda, 6) == 0)
                 {
+                    scanned_check[i] = (int)time(NULL);
                     connect_infos[i].status = 1;
                     connect_infos[i].rssi = scan_result->scan_rst.rssi;
                     connect_infos[i].adv_data_len = scan_result->scan_rst.adv_data_len + scan_result->scan_rst.scan_rsp_len;
@@ -539,6 +520,17 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
                     // esp_log_buffer_hex(GATTC_TAG, connect_infos[i].adv_data, connect_infos[i].adv_data_len);
                 }
             }
+            for(uint8_t i = 0; i < connect_info_num; i++)
+            {
+                if(connect_infos[i].status != 1)
+                    continue;
+                //if find no device over 5s, then update status to 0
+                if(((int)time(NULL) - scanned_check[i]) > 5) 
+                {
+                    connect_infos[i].status = 0;
+                }
+            }
+            
             break;
         case ESP_GAP_SEARCH_INQ_CMPL_EVT:
             printf("ESP_GAP_SEARCH_INQ_CMPL_EVT\n");
@@ -587,12 +579,11 @@ static void esp_gattc_cb(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if, esp
     if (event == ESP_GATTC_REG_EVT) {
         if (param->reg.status == ESP_GATT_OK) {
             ESP_LOGW(GATTC_TAG, "EVT %d, gattc if %d, app_id %d", event, gattc_if, param->reg.app_id);
-
-            ProfileNodeT *temp = findProfile(param->reg.app_id);
+            BleProfileT *temp = connect_infos[param->reg.app_id].profile;
             if(temp != NULL)
             {
-                temp->profile.gattc_if = gattc_if;
-                temp->profile.app_id = param->reg.app_id;
+                temp->gattc_if = gattc_if;
+                temp->app_id = param->reg.app_id;
                 temp = NULL;
             }
             else
@@ -609,15 +600,16 @@ static void esp_gattc_cb(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if, esp
     /* If the gattc_if equal to profile i, call profile A cb handler,
      * so here call each profile's callback */
     do {
-        ProfileNodeT *temp = head_profile;
-        while(temp != NULL)
+        for(uint8_t i = 0; i < connect_info_num; i++)
         {
-            if (gattc_if == ESP_GATT_IF_NONE || gattc_if == temp->profile.gattc_if) {
-                if (temp->profile.gattc_cb) {
-                    temp->profile.gattc_cb(event, gattc_if, param);
+            if(connect_infos[i].profile == NULL)
+                continue;
+            BleProfileT *temp = connect_infos[i].profile;
+            if (gattc_if == ESP_GATT_IF_NONE || gattc_if == temp->gattc_if) {
+                if (temp->gattc_cb) {
+                    temp->gattc_cb(event, gattc_if, param);
                 }
             }
-            temp = temp->next;
         }
     } while (0);
 
@@ -669,49 +661,68 @@ void getAdvData(uint8_t dev_id, uint8_t *buff)
     memcpy(buff, connect_infos[dev_id].adv_data, connect_infos[dev_id].adv_data_len);
 }
 
-void disconnectBle(uint8_t profile_id) {
-    ProfileNodeT *temp = findProfile(profile_id);
-    if(temp == NULL)
+void disconnectBle(uint8_t dev_id) {
+    if(dev_id >= connect_info_num)
     {
-        ESP_LOGE(GATTC_TAG, "profile_id error");
+        ESP_LOGE(GATTC_TAG, "disconnectBle : dev_id error %d\n", dev_id);
         return;
     }
-    if(connect_infos[temp->dev_id].status == 2) {
+    if(connect_infos[dev_id].profile == NULL)
+    {
+        ESP_LOGE(GATTC_TAG, "disconnectBle : connect_infos[dev_id].profile");
+        return;
+    }
+    if(connect_infos[dev_id].status == 2) {
         ESP_LOGE(GATTC_TAG, "disconnect BLE");
-        esp_ble_gap_disconnect(temp->profile.remote_bda);
+        esp_ble_gap_disconnect(connect_infos[dev_id].bda);
     }
 }
 
-bool getDataStatus(uint8_t profile_id, uint8_t s_id, uint8_t ch_id) {
-    ProfileNodeT *temp = findProfile(profile_id);
-    if(temp == NULL)
+bool getDataStatus(uint8_t dev_id, uint8_t s_id, uint8_t ch_id) {
+    if(dev_id >= connect_info_num)
     {
-        ESP_LOGE(GATTC_TAG, "profile_id error");
+        ESP_LOGE(GATTC_TAG, "getDataStatus : dev_id error %d\n", dev_id);
         return;
     }
-    return temp->profile.services[s_id].chars[ch_id].have_data;
+    BleProfileT *temp = connect_infos[dev_id].profile;
+    if(temp == NULL)
+    {
+        ESP_LOGE(GATTC_TAG, "getDataStatus : temp == NULL");
+        return;
+    }
+    return temp->services[s_id].chars[ch_id].have_data;
 }
 
-uint8_t getNotifyLen(uint8_t profile_id, uint8_t s_id, uint8_t ch_id) 
+uint8_t getNotifyLen(uint8_t dev_id, uint8_t s_id, uint8_t ch_id) 
 {
-    ProfileNodeT *temp = findProfile(profile_id);
-    if(temp == NULL)
+    if(dev_id >= connect_info_num)
     {
-        ESP_LOGE(GATTC_TAG, "profile_id error");
+        ESP_LOGE(GATTC_TAG, "getNotifyLen : dev_id error %d\n", dev_id);
         return;
     }
-    return temp->profile.services[s_id].chars[ch_id].notify_len;
+    BleProfileT *temp = connect_infos[dev_id].profile;
+    if(temp == NULL)
+    {
+        ESP_LOGE(GATTC_TAG, "getNotifyLen : temp == NULL");
+        return;
+    }
+    return temp->services[s_id].chars[ch_id].notify_len;
 }
 
-void getNotifyVlaue(uint8_t profile_id, uint8_t s_id, uint8_t ch_id, uint8_t *target) {
-    ProfileNodeT *temp = findProfile(profile_id);
-    if(temp == NULL)
+void getNotifyVlaue(uint8_t dev_id, uint8_t s_id, uint8_t ch_id, uint8_t *target) {
+    if(dev_id >= connect_info_num)
     {
-        ESP_LOGE(GATTC_TAG, "profile_id error");
+        ESP_LOGE(GATTC_TAG, "getNotifyVlaue : dev_id error %d\n", dev_id);
         return;
     }
-    memcpy(target, temp->profile.services[s_id].chars[ch_id].notify_value, temp->profile.services[s_id].chars[ch_id].notify_len);
-    temp->profile.services[s_id].chars[ch_id].have_data = false;
+    BleProfileT *temp = connect_infos[dev_id].profile;
+    if(temp == NULL)
+    {
+        ESP_LOGE(GATTC_TAG, "getNotifyVlaue : temp == NULL");
+        return;
+    }
+    memcpy(target, temp->services[s_id].chars[ch_id].notify_value, temp->services[s_id].chars[ch_id].notify_len);
+    temp->services[s_id].chars[ch_id].have_data = false;
 }
 
 void initBle()
@@ -772,14 +783,22 @@ void initBle()
     }
 }
 
-void openProfile(uint8_t profile_id)
+void openProfile(uint8_t dev_id)
 {
     stopScan();
     vTaskDelay(pdMS_TO_TICKS(50));
 
-    ProfileNodeT *temp = findProfile(profile_id);
+    if(dev_id >= connect_info_num)
+    {
+        ESP_LOGE(GATTC_TAG, "openProfile : dev_id error %d\n", dev_id);
+        return;
+    }
+    BleProfileT *temp = connect_infos[dev_id].profile;
+    if(temp == NULL)
+    {
+        ESP_LOGE(GATTC_TAG, "openProfile : temp == NULL");
+        return;
+    }
     if(temp != NULL) 
-        esp_ble_gattc_open(temp->profile.gattc_if, temp->profile.remote_bda, 0, true);  
-    else
-        ESP_LOGE(GATTC_TAG, "openProfile error");
+        esp_ble_gattc_open(temp->gattc_if, connect_infos[dev_id].bda, 0, true);  
 }

@@ -40,7 +40,6 @@ struct BleProfile{
     uint16_t gattc_if;
     uint16_t app_id;
     uint16_t conn_id;
-    esp_bd_addr_t remote_bda;
     uint8_t adv_data[64];
     uint8_t adv_data_len;
     int rssi;
@@ -48,15 +47,6 @@ struct BleProfile{
     BleServiceT *services;
 };
 typedef struct BleProfile BleProfileT;
-
-struct ProfileNode
-{
-    uint8_t dev_id;
-    uint8_t profile_id;
-    BleProfileT profile;
-    struct ProfileNode *next;
-};
-typedef struct ProfileNode ProfileNodeT;
 
 struct ConnectInfo{
     uint8_t dev_id;
@@ -66,16 +56,15 @@ struct ConnectInfo{
     int rssi;
     uint8_t adv_data[64];
     uint8_t adv_data_len;
+    BleProfileT *profile;
 };
 typedef struct ConnectInfo ConnectInfoT;
 
 void setConnectInfo(ConnectInfoT* infos, uint8_t size);
-
+bool findProfile(uint8_t dev_id);
 void addProfile(uint8_t dev_id, UuidsT *myUUIDs, uint8_t service_num);
-void deleteProfile(uint8_t profile_id);
-ProfileNodeT *findProfile(uint8_t profile_id);
-
-void sendCommand(uint8_t profile_id, uint8_t s_id, uint8_t ch_id, const uint8_t *cmd, int len);
+void deleteProfile(uint8_t dev_id);
+void sendCommand(uint8_t dev_id, uint8_t s_id, uint8_t ch_id, const uint8_t *cmd, int len);
 void initBle();
 void startScan(int duration);
 void stopScan();
@@ -83,11 +72,11 @@ uint8_t getAdvLen(uint8_t dev_id);
 void getAdvData(uint8_t dev_id, uint8_t *buff);
 int getRssi(uint8_t dev_id);
 uint8_t getBleStatus(uint8_t dev_id);
-void disconnectBle(uint8_t profile_id);
-void requestRead(uint8_t profile_id, uint8_t s_id, uint8_t ch_id);
-void openProfile(uint8_t profile_id);
-bool getDataStatus(uint8_t profile_id, uint8_t s_id, uint8_t ch_id);
-uint8_t getNotifyLen(uint8_t profile_id, uint8_t s_id, uint8_t ch_id);
-void getNotifyVlaue(uint8_t profile_id, uint8_t s_id, uint8_t ch_id, uint8_t *target);
+void disconnectBle(uint8_t dev_id);
+void requestRead(uint8_t dev_id, uint8_t s_id, uint8_t ch_id);
+void openProfile(uint8_t dev_id);
+bool getDataStatus(uint8_t dev_id, uint8_t s_id, uint8_t ch_id);
+uint8_t getNotifyLen(uint8_t dev_id, uint8_t s_id, uint8_t ch_id);
+void getNotifyVlaue(uint8_t dev_id, uint8_t s_id, uint8_t ch_id, uint8_t *target);
 
 #endif /* BLE_CLIENT_H_ */
