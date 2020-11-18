@@ -5,7 +5,7 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 
-#include "ble_clients.h"
+#include "ble_muti_clients.h"
 
 #define DEVICE_NUM 2
 

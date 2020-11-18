@@ -14,10 +14,10 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
-#include "ble_clients.h"
+#include "ble_muti_clients.h"
 
 
-#define GATTC_TAG "BLE_CLIENTS_C"
+#define GATTC_TAG "BLE_MUTI_CLIENTS_C"
 #define INVALID_HANDLE   0
 
 static esp_gattc_char_elem_t *char_elem_result   = NULL;

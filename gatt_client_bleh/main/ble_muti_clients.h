@@ -1,5 +1,5 @@
-#ifndef BLE_CLIENT_H_
-#define BLE_CLIENT_H_
+#ifndef BLE_MUTI_CLIENTS_H
+#define BLE_MUTI_CLIENTS_H
 
 #include <stdint.h>
 #include "esp_gap_ble_api.h"
@@ -79,4 +79,4 @@ bool getDataStatus(uint8_t dev_id, uint8_t s_id, uint8_t ch_id);
 uint8_t getNotifyLen(uint8_t dev_id, uint8_t s_id, uint8_t ch_id);
 void getNotifyVlaue(uint8_t dev_id, uint8_t s_id, uint8_t ch_id, uint8_t *target);
 
-#endif /* BLE_CLIENT_H_ */
+#endif /* BLE_MUTI_CLIENTS_H */
