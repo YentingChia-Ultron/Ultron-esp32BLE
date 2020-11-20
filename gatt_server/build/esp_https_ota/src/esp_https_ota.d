@@ -5,7 +5,7 @@ src/esp_https_ota.o: \
  /Users/yenchia/esp/esp-idf/components/freertos/include/freertos/FreeRTOS.h \
  /Users/yenchia/esp/esp-idf/components/esp_common/include/esp_compiler.h \
  /Users/yenchia/esp/esp-idf/components/freertos/include/freertos/FreeRTOSConfig.h \
- /Users/yenchia/esp/testBLE/gatt_server/build/include/sdkconfig.h \
+ /Users/yenchia/esp/Ultron-esp32BLE/gatt_server/build/include/sdkconfig.h \
  /Users/yenchia/esp/esp-idf/components/freertos/include/freertos/xtensa_config.h \
  /Users/yenchia/esp/esp-idf/components/xtensa/include/xtensa/hal.h \
  /Users/yenchia/esp/esp-idf/components/xtensa/esp32/include/xtensa/config/core.h \
@@ -69,7 +69,7 @@ src/esp_https_ota.o: \
 
 /Users/yenchia/esp/esp-idf/components/freertos/include/freertos/FreeRTOSConfig.h:
 
-/Users/yenchia/esp/testBLE/gatt_server/build/include/sdkconfig.h:
+/Users/yenchia/esp/Ultron-esp32BLE/gatt_server/build/include/sdkconfig.h:
 
 /Users/yenchia/esp/esp-idf/components/freertos/include/freertos/xtensa_config.h:
 

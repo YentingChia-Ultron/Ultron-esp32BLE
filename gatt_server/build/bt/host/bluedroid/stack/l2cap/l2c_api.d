@@ -2,7 +2,7 @@ host/bluedroid/stack/l2cap/l2c_api.o: \
  /Users/yenchia/esp/esp-idf/components/bt/host/bluedroid/stack/l2cap/l2c_api.c \
  /Users/yenchia/esp/esp-idf/components/bt/host/bluedroid/common/include/common/bt_trace.h \
  /Users/yenchia/esp/esp-idf/components/newlib/platform_include/assert.h \
- /Users/yenchia/esp/esp-idf/examples/bluetooth/bluedroid/ble/gatt_server/build/include/sdkconfig.h \
+ /Users/yenchia/esp/Ultron-esp32BLE/gatt_server/build/include/sdkconfig.h \
  /Users/yenchia/esp/esp-idf/components/esp_common/include/esp_compiler.h \
  /Users/yenchia/esp/esp-idf/components/bt/host/bluedroid/common/include/common/bluedroid_user_config.h \
  /Users/yenchia/esp/esp-idf/components/bt/common/include/bt_common.h \
@@ -99,7 +99,7 @@ host/bluedroid/stack/l2cap/l2c_api.o: \
 
 /Users/yenchia/esp/esp-idf/components/newlib/platform_include/assert.h:
 
-/Users/yenchia/esp/esp-idf/examples/bluetooth/bluedroid/ble/gatt_server/build/include/sdkconfig.h:
+/Users/yenchia/esp/Ultron-esp32BLE/gatt_server/build/include/sdkconfig.h:
 
 /Users/yenchia/esp/esp-idf/components/esp_common/include/esp_compiler.h:
 

@@ -1,9 +1,9 @@
 gatts_demo.o: \
- /Users/yenchia/esp/esp-idf/examples/bluetooth/bluedroid/ble/gatt_server/main/gatts_demo.c \
+ /Users/yenchia/esp/Ultron-esp32BLE/gatt_server/main/gatts_demo.c \
  /Users/yenchia/esp/esp-idf/components/freertos/include/freertos/FreeRTOS.h \
  /Users/yenchia/esp/esp-idf/components/esp_common/include/esp_compiler.h \
  /Users/yenchia/esp/esp-idf/components/freertos/include/freertos/FreeRTOSConfig.h \
- /Users/yenchia/esp/esp-idf/examples/bluetooth/bluedroid/ble/gatt_server/build/include/sdkconfig.h \
+ /Users/yenchia/esp/Ultron-esp32BLE/gatt_server/build/include/sdkconfig.h \
  /Users/yenchia/esp/esp-idf/components/freertos/include/freertos/xtensa_config.h \
  /Users/yenchia/esp/esp-idf/components/xtensa/include/xtensa/hal.h \
  /Users/yenchia/esp/esp-idf/components/xtensa/esp32/include/xtensa/config/core.h \
@@ -67,7 +67,7 @@ gatts_demo.o: \
 
 /Users/yenchia/esp/esp-idf/components/freertos/include/freertos/FreeRTOSConfig.h:
 
-/Users/yenchia/esp/esp-idf/examples/bluetooth/bluedroid/ble/gatt_server/build/include/sdkconfig.h:
+/Users/yenchia/esp/Ultron-esp32BLE/gatt_server/build/include/sdkconfig.h:
 
 /Users/yenchia/esp/esp-idf/components/freertos/include/freertos/xtensa_config.h:
 
@@ -180,4 +180,4 @@ gatts_demo.o: \
 /Users/yenchia/esp/esp-idf/components/bt/host/bluedroid/api/include/api/esp_bt_main.h:
 
 /Users/yenchia/esp/esp-idf/components/bt/host/bluedroid/api/include/api/esp_gatt_common_api.h:
-/Users/yenchia/esp/esp-idf/examples/bluetooth/bluedroid/ble/gatt_server/main/./gatts_demo.c:
+/Users/yenchia/esp/Ultron-esp32BLE/gatt_server/main/./gatts_demo.c:

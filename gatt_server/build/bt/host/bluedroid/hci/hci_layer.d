@@ -3,7 +3,7 @@ host/bluedroid/hci/hci_layer.o: \
  /Users/yenchia/esp/esp-idf/components/bt/include/esp_bt.h \
  /Users/yenchia/esp/esp-idf/components/esp_common/include/esp_err.h \
  /Users/yenchia/esp/esp-idf/components/newlib/platform_include/assert.h \
- /Users/yenchia/esp/esp-idf/examples/bluetooth/bluedroid/ble/gatt_server/build/include/sdkconfig.h \
+ /Users/yenchia/esp/Ultron-esp32BLE/gatt_server/build/include/sdkconfig.h \
  /Users/yenchia/esp/esp-idf/components/esp_common/include/esp_compiler.h \
  /Users/yenchia/esp/esp-idf/components/esp_common/include/esp_task.h \
  /Users/yenchia/esp/esp-idf/components/freertos/include/freertos/FreeRTOSConfig.h \
@@ -101,7 +101,7 @@ host/bluedroid/hci/hci_layer.o: \
 
 /Users/yenchia/esp/esp-idf/components/newlib/platform_include/assert.h:
 
-/Users/yenchia/esp/esp-idf/examples/bluetooth/bluedroid/ble/gatt_server/build/include/sdkconfig.h:
+/Users/yenchia/esp/Ultron-esp32BLE/gatt_server/build/include/sdkconfig.h:
 
 /Users/yenchia/esp/esp-idf/components/esp_common/include/esp_compiler.h:
 

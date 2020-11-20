@@ -4,7 +4,7 @@ common/osi/alarm.o: \
  /Users/yenchia/esp/esp-idf/components/esp_common/include/esp_timer.h \
  /Users/yenchia/esp/esp-idf/components/esp_common/include/esp_err.h \
  /Users/yenchia/esp/esp-idf/components/newlib/platform_include/assert.h \
- /Users/yenchia/esp/esp-idf/examples/bluetooth/bluedroid/ble/gatt_server/build/include/sdkconfig.h \
+ /Users/yenchia/esp/Ultron-esp32BLE/gatt_server/build/include/sdkconfig.h \
  /Users/yenchia/esp/esp-idf/components/esp_common/include/esp_compiler.h \
  /Users/yenchia/esp/esp-idf/components/bt/common/osi/include/osi/allocator.h \
  /Users/yenchia/esp/esp-idf/components/heap/include/esp_heap_caps.h \
@@ -71,7 +71,7 @@ common/osi/alarm.o: \
 
 /Users/yenchia/esp/esp-idf/components/newlib/platform_include/assert.h:
 
-/Users/yenchia/esp/esp-idf/examples/bluetooth/bluedroid/ble/gatt_server/build/include/sdkconfig.h:
+/Users/yenchia/esp/Ultron-esp32BLE/gatt_server/build/include/sdkconfig.h:
 
 /Users/yenchia/esp/esp-idf/components/esp_common/include/esp_compiler.h:
 

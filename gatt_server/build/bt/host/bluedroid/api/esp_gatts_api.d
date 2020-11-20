@@ -6,7 +6,7 @@ host/bluedroid/api/esp_gatts_api.o: \
  /Users/yenchia/esp/esp-idf/components/bt/host/bluedroid/api/include/api/esp_gatt_defs.h \
  /Users/yenchia/esp/esp-idf/components/esp_common/include/esp_err.h \
  /Users/yenchia/esp/esp-idf/components/newlib/platform_include/assert.h \
- /Users/yenchia/esp/esp-idf/examples/bluetooth/bluedroid/ble/gatt_server/build/include/sdkconfig.h \
+ /Users/yenchia/esp/Ultron-esp32BLE/gatt_server/build/include/sdkconfig.h \
  /Users/yenchia/esp/esp-idf/components/esp_common/include/esp_compiler.h \
  /Users/yenchia/esp/esp-idf/components/bt/host/bluedroid/api/include/api/esp_bt_main.h \
  /Users/yenchia/esp/esp-idf/components/bt/common/btc/include/btc/btc_manage.h \
@@ -118,7 +118,7 @@ host/bluedroid/api/esp_gatts_api.o: \
 
 /Users/yenchia/esp/esp-idf/components/newlib/platform_include/assert.h:
 
-/Users/yenchia/esp/esp-idf/examples/bluetooth/bluedroid/ble/gatt_server/build/include/sdkconfig.h:
+/Users/yenchia/esp/Ultron-esp32BLE/gatt_server/build/include/sdkconfig.h:
 
 /Users/yenchia/esp/esp-idf/components/esp_common/include/esp_compiler.h:
 

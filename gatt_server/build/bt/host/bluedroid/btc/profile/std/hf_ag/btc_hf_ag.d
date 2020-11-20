@@ -1,7 +1,7 @@
 host/bluedroid/btc/profile/std/hf_ag/btc_hf_ag.o: \
  /Users/yenchia/esp/esp-idf/components/bt/host/bluedroid/btc/profile/std/hf_ag/btc_hf_ag.c \
  /Users/yenchia/esp/esp-idf/components/newlib/platform_include/assert.h \
- /Users/yenchia/esp/esp-idf/examples/bluetooth/bluedroid/ble/gatt_server/build/include/sdkconfig.h \
+ /Users/yenchia/esp/Ultron-esp32BLE/gatt_server/build/include/sdkconfig.h \
  /Users/yenchia/esp/esp-idf/components/esp_common/include/esp_compiler.h \
  /Users/yenchia/esp/esp-idf/components/newlib/platform_include/time.h \
  /Users/yenchia/esp/esp-idf/components/bt/host/bluedroid/btc/include/btc/btc_dm.h \
@@ -109,7 +109,7 @@ host/bluedroid/btc/profile/std/hf_ag/btc_hf_ag.o: \
 
 /Users/yenchia/esp/esp-idf/components/newlib/platform_include/assert.h:
 
-/Users/yenchia/esp/esp-idf/examples/bluetooth/bluedroid/ble/gatt_server/build/include/sdkconfig.h:
+/Users/yenchia/esp/Ultron-esp32BLE/gatt_server/build/include/sdkconfig.h:
 
 /Users/yenchia/esp/esp-idf/components/esp_common/include/esp_compiler.h:
 

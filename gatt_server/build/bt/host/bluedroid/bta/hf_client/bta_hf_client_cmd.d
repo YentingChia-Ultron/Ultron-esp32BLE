@@ -5,7 +5,7 @@ host/bluedroid/bta/hf_client/bta_hf_client_cmd.o: \
  /Users/yenchia/esp/esp-idf/components/bt/host/bluedroid/common/include/common/bt_target.h \
  /Users/yenchia/esp/esp-idf/components/bt/common/include/bt_common.h \
  /Users/yenchia/esp/esp-idf/components/bt/common/include/bt_user_config.h \
- /Users/yenchia/esp/esp-idf/examples/bluetooth/bluedroid/ble/gatt_server/build/include/sdkconfig.h \
+ /Users/yenchia/esp/Ultron-esp32BLE/gatt_server/build/include/sdkconfig.h \
  /Users/yenchia/esp/esp-idf/components/log/include/esp_log.h \
  /Users/yenchia/esp/esp-idf/components/esp_rom/include/esp32/rom/ets_sys.h \
  /Users/yenchia/esp/esp-idf/components/log/include/esp_log_internal.h \
@@ -103,7 +103,7 @@ host/bluedroid/bta/hf_client/bta_hf_client_cmd.o: \
 
 /Users/yenchia/esp/esp-idf/components/bt/common/include/bt_user_config.h:
 
-/Users/yenchia/esp/esp-idf/examples/bluetooth/bluedroid/ble/gatt_server/build/include/sdkconfig.h:
+/Users/yenchia/esp/Ultron-esp32BLE/gatt_server/build/include/sdkconfig.h:
 
 /Users/yenchia/esp/esp-idf/components/log/include/esp_log.h:
 
